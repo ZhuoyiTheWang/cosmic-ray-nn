@@ -1,10 +1,8 @@
-import tensorflow as tf
-from tensorflow import keras
 import numpy as np
 import os
-from keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention
-from keras.models import Model
-from keras.optimizers import Adam
+# from keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention
+# from keras.models import Model
+# from keras.optimizers import Adam
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -17,14 +15,14 @@ f = np.load(preprocessed_data, allow_pickle=True)
 
 # Extract variables from file
 mass = f['mass']
-dEdXmx = f['lgdEdXmx']
 zen = f['zenith']
-integral = f['integral']
 x_var = f['x']
 dEdX = f['dEdX']
 
 # Create train and test split
-X_singular = np.stack([dEdXmx, zen, integral], axis=-1)
+x_train = np.stack([zen, x_var, dEdX], axis=-1)
+
+print(x_train[0])
 
 # Split the data into training and test sets
 indicesFile = 'DataFast/zwang/train_indices.npz'
