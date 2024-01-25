@@ -5,13 +5,9 @@ f = np.load(preprocessed_data, allow_pickle=True)
 
 # Extract variables from file
 mass = f['mass']
-dEdXmx = f['lgdEdXmx']
-zen = f['zenith']
-x_var = f['x']
-dEdX = f['dEdX']
 
 # Create train and test split
-shuffled_indices = np.arange(len(dEdX))
+shuffled_indices = np.arange(len(mass))
 
 # Shuffle the data randomly
 np.random.shuffle(shuffled_indices)
