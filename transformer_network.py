@@ -1,8 +1,9 @@
 import numpy as np
+import tensorflow as tf
 import os
-# from keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention
-# from keras.models import Model
-# from keras.optimizers import Adam
+from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention
+from keras.models import Model
+from keras.optimizers import Adam
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -16,13 +17,14 @@ f = np.load(preprocessed_data, allow_pickle=True)
 # Extract variables from file
 mass = f['mass']
 zen = f['zenith']
-x_var = f['x']
+X = f['x']
 dEdX = f['dEdX']
 
-# Create train and test split
-x_train = np.stack([zen, x_var, dEdX], axis=-1)
+# Reshape zenith to a 2-D array to be concatenated with dEdX and X
+zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 
-print(x_train[0])
+# Format data
+features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
 indicesFile = 'DataFast/zwang/train_indices.npz'
@@ -31,56 +33,75 @@ indices_train = indices['indices_train']
 indices_test = indices['indices_test']
 
 # Split the non-array data into train and test
-x_train1 = X_singular[indices_train]
-x_test1 = X_singular[indices_test]
+x_train = features[indices_train]
+x_test = features[indices_test]
 y_train = mass[indices_train]
 y_test = mass[indices_test]
 
-dEdX_train = dEdX[indices_train]
-dEdX_test = dEdX[indices_test]
-Xvar_train = x_var[indices_train]
-Xvar_test = x_var[indices_test]
-x_train2 = np.stack([dEdX_train, Xvar_train], axis=-1)
-x_test2 = np.stack([dEdX_test, Xvar_test], axis=-1)
+class PositionalEncoding(Layer):
+    def __init__(self, sequence_len, d_model, **kwargs):
+        super(PositionalEncoding, self).__init__(**kwargs)
+        self.pos_encoding = self.positional_encoding(sequence_len, d_model)
 
-# define input shape
-input_shape = (3,)
+    def get_angles(self, position, i, d_model):
+        angles = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+        return position * angles
 
-# define input layer
-inputs = Input(shape=input_shape)
+    def positional_encoding(self, position, d_model):
+        angle_rads = self.get_angles(np.arange(position)[:, np.newaxis],
+                                     np.arange(d_model)[np.newaxis, :],
+                                     d_model)
+        # Apply sin to even indices in the array; 2i
+        sines = np.sin(angle_rads[:, 0::2])
+        # Apply cos to odd indices in the array; 2i+1
+        cosines = np.cos(angle_rads[:, 1::2])
+        pos_encoding = np.concatenate([sines, cosines], axis=-1)
+        pos_encoding = pos_encoding[np.newaxis, ...]
+        return tf.cast(pos_encoding, dtype=tf.float32)
 
-# Define transformer and feedforward layers as functions
-def transformer_block(x):
-    attention = MultiHeadAttention(num_heads=8, key_dim=64)([x, x])
-    x = Dropout(0.1)(attention)
-    return LayerNormalization(epsilon=1e-6)(x + attention)
+    def call(self, inputs):
+        return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
-def feedforward_block(x, units):
-    x = Dense(units, activation='relu')(x)
-    x = Dropout(0.1)(x)
-    return LayerNormalization(epsilon=1e-6)(x)
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
+    # Normalization and Attention
+    x = LayerNormalization(epsilon=1e-6)(inputs)
+    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, x)
+    x = Dropout(dropout)(x)
+    res = x + inputs
 
-# Apply transformer blocks
-x = transformer_block(inputs)
-x = transformer_block(x)
-x = transformer_block(x)
+    # Feed Forward Part
+    x = LayerNormalization(epsilon=1e-6)(res)
+    x = Dense(ff_dim, activation="relu")(x)
+    x = Dropout(dropout)(x)
+    x = Dense(inputs.shape[-1])(x)
+    return x + res
 
-# Apply feedforward blocks
-x = feedforward_block(x, 512)
-x = feedforward_block(x, 256)
+def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout=0.1):
+    inputs = Input(shape=(sequence_len, feature_size))
+    x = PositionalEncoding(sequence_len, feature_size)(inputs)
+    for _ in range(num_layers):
+        x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
-# Apply final output layer
-output = Dense(1, activation='linear')(x)
+    x = LayerNormalization(epsilon=1e-6)(x)
+    x = Dense(1)(x)  # Assuming a single output value for each time step
 
-# Create model
-model = Model(inputs=inputs, outputs=output)
+    return Model(inputs, x)
 
-# compile model
-optimizer = Adam(lr=1e-4)
-model.compile(optimizer=optimizer, loss='mse')
+sequence_len = x_train.shape[1]  # Number of events in the sequence
+feature_size = 3  # Number of features per time step (X, dEdX, Zenith Angle)
 
-fit = model.fit([x_train1, x_train2], y_train, epochs=20, batch_size=64, validation_split=0.1)
+# Transformer hyperparameters
+head_size = 64  # Size of each attention head
+num_heads = 8  # Number of attention heads
+ff_dim = 256  # Hidden layer size in feed forward network inside transformer
+num_layers = 4  # Number of transformer layers
+dropout = 0.1  # Dropout rate
+
+model = build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout)
+
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
+model.fit(x_train, y_train, batch_size=32, epochs=100, validation_split=0.2)
 
 # Analyze performance
-mass_pred = model.predict([x_test1, x_test2], batch_size=64, verbose=1)[:,0]
+mass_pred = model.predict(x_test)
 mass_pred = mass_pred.reshape(len(y_test))
