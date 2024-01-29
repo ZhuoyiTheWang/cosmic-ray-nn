@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import os
-from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention
+from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from keras.models import Model
 from keras.optimizers import Adam
 
@@ -83,6 +83,7 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
         x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
     x = LayerNormalization(epsilon=1e-6)(x)
+    x = GlobalAveragePooling1D()(x)
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
     return Model(inputs, x)
@@ -100,8 +101,11 @@ dropout = 0.1  # Dropout rate
 model = build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout)
 
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-model.fit(x_train, y_train, batch_size=32, epochs=100, validation_split=0.2)
+model.fit(x_train, y_train, batch_size=32, epochs=1, validation_split=0.2)
 
 # Analyze performance
 mass_pred = model.predict(x_test)
+
+print(mass_pred.shape)
+
 mass_pred = mass_pred.reshape(len(y_test))
