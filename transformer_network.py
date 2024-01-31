@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from keras.models import Model
 from keras.optimizers import Adam
+from itertools import product
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -92,24 +93,54 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
 sequence_len = x_train.shape[1]  # Number of events in the sequence
 feature_size = 3  # Number of features per time step (X, dEdX, Zenith Angle)
 
-# Transformer hyperparameters
-head_size = 64  # Size of each attention head
-num_heads = 8  # Number of attention heads
-ff_dim = 256  # Hidden layer size in feed forward network inside transformer
-num_layers = 4  # Number of transformer layers
-dropout = 0.1  # Dropout rate
+# Transformer hyperparameters  
+hyperparameters = {
+    'head_size': [32, 64, 128], # Size of each attention head
+    'num_heads': [4, 8, 16], # Number of attention heads
+    'ff_dim': [128, 256, 512], # Hidden layer size in feed forward network inside transformer
+    'num_layers': [2, 4, 6], # Number of transformer layers
+    'dropout': [0.1, 0.15, 0.2], # Dropout rate
+    'batch_size': [32, 64, 128] # Batch size
+}
 
-model = build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout)
+# Function to train a model and return the validation loss
+def train_and_evaluate_model(hp):
+    model = build_model(sequence_len, feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
+    fit = model.fit(x_train, y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
+    validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
+    return model, validation_loss, fit
 
-model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-fit = model.fit(x_train, y_train, batch_size=32, epochs=3, validation_split=0.2)
+# Initialize variables to store the best model and its performance
+best_model = None
+best_fit = None
+best_validation_loss = np.inf
+best_hp = {}
+
+for hp_values in product(*hyperparameters.values()):
+    hp = dict(zip(hyperparameters.keys(), hp_values))
+    print(f"Training with hyperparameters: {hp}")
+    model, validation_loss, fit = train_and_evaluate_model(hp)
+    
+    # Update the best model if current model is better
+    if validation_loss < best_validation_loss:
+        best_validation_loss = validation_loss
+        best_model = model
+        best_fit = fit
+        best_hp = hp
+        # Save the best model
+        best_model.save('home/zwang/comsic-ray-nn/best_model.h5')
+        print(f"New best model with val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
+
+print(f"Best model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Plot training curves
 fig, ax = plt.subplots(1, figsize=(8,5))
-n = np.arange(len(fit.history['loss']))
+n = np.arange(len(best_fit.history['loss']))
 
-ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
-ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
+ax.plot(n, best_fit.history['loss'], ls='--', c='k', label='loss')
+ax.plot(n, best_fit.history['val_loss'], label='val_loss', color='red')
+
 
 ax.set_xlabel('Epoch')
 ax.set_ylabel('Loss')

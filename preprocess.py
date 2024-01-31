@@ -14,7 +14,7 @@ noise = False # Whether to add noise to dEdX values
 
 num_files = 0
 # Open files in each folder
-for i in range(0, 3):
+for i in range(1, 6):
     foldername = f'/Data/Simulations/Conex_Flat_lnA/EPOS/Conex_170-205_Prod{i}/showers/*.root'
     print(foldername)
     for filename in glob.glob(foldername):
