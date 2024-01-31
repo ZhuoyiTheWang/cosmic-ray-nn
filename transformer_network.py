@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import os
 from matplotlib import pyplot as plt
-from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
+from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking
 from keras.models import Model
 from keras.optimizers import Adam
 from itertools import product
@@ -19,14 +19,13 @@ f = np.load(preprocessed_data, allow_pickle=True)
 # Extract variables from file
 mass = f['mass']
 zen = f['zenith']
+Xmx = f['Xmx']
 X = f['x']
 dEdX = f['dEdX']
 
-# Reshape zenith to a 2-D array to be concatenated with dEdX and X
-zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
-
 # Format data
-features = np.stack([X, dEdX, zen], axis=-1)
+sequential_features = np.stack([X, dEdX], axis=-1)
+singular_feartures = np.stack([Xmx, zen], axis=-1)
 
 # Split the data into training and test sets
 indicesFile = 'DataFast/zwang/train_indices_small.npz'
@@ -35,10 +34,15 @@ indices_train = indices['indices_train']
 indices_test = indices['indices_test']
 
 # Split the non-array data into train and test
-x_train = features[indices_train]
-x_test = features[indices_test]
+x_train_sequential = sequential_features[indices_train]
+x_test_sequential = sequential_features[indices_test]
+x_train_singular = singular_feartures[indices_train]
+x_test_singular = singular_feartures[indices_test]
 y_train = mass[indices_train]
 y_test = mass[indices_test]
+
+sequence_len = sequential_features.shape[1]  # Number of events in the sequence
+sequential_feature_size = 2  # Number of features per time step (X, dEdX)
 
 class PositionalEncoding(Layer):
     def __init__(self, sequence_len, d_model, **kwargs):
@@ -64,50 +68,53 @@ class PositionalEncoding(Layer):
     def call(self, inputs):
         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
-def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
     # Normalization and Attention
     x = LayerNormalization(epsilon=1e-6)(inputs)
-    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, x)
+    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x,x)
     x = Dropout(dropout)(x)
     res = x + inputs
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim, activation="relu")(x)
+    x = Dense(ff_dim, activation="elu")(x)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res
 
 def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout=0.1):
-    inputs = Input(shape=(sequence_len, feature_size))
-    x = PositionalEncoding(sequence_len, feature_size)(inputs)
+    sequence_input = Input(shape=(sequence_len, feature_size))
+    singular_input = Input(shape=(2,))
+
+    x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
+    x = PositionalEncoding(sequence_len, feature_size)(x)
     for _ in range(num_layers):
         x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
     x = LayerNormalization(epsilon=1e-6)(x)
     x = GlobalAveragePooling1D()(x)
+    x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
-    return Model(inputs, x)
-
-sequence_len = x_train.shape[1]  # Number of events in the sequence
-feature_size = 3  # Number of features per time step (X, dEdX, Zenith Angle)
+    return Model(inputs = [sequence_input, singular_input], outputs = x)
 
 # Transformer hyperparameters  
 hyperparameters = {
-    'head_size': [32, 64, 128], # Size of each attention head
-    'num_heads': [4, 8, 16], # Number of attention heads
-    'ff_dim': [128, 256, 512], # Hidden layer size in feed forward network inside transformer
-    'num_layers': [2, 4, 6], # Number of transformer layers
-    'dropout': [0.1, 0.15, 0.2], # Dropout rate
-    'batch_size': [32, 64, 128] # Batch size
+    'head_size': [16], # Size of each attention head
+    'num_heads': [8], # Number of attention heads
+    'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
+    'num_layers': [3], # Number of transformer layers
+    'dropout': [0.1], # Dropout rate
+    'batch_size': [64] # Batch size
 }
+
+adam_optimizer = Adam(learning_rate=0.01)
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
-    model = build_model(sequence_len, feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-    fit = model.fit(x_train, y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
+    model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
+    model.compile(optimizer=adam_optimizer, loss='mean_squared_error', metrics=['mean_absolute_error'])
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -152,7 +159,7 @@ plt.title('Training and Validation Loss')
 plt.savefig('home/zwang/cosmic-ray-nn/training_curves.png')
 
 # Analyze performance
-mass_pred = model.predict(x_test)
+mass_pred = model.predict([x_train_sequential, x_train_singular])
 
 print(mass_pred.shape)
 

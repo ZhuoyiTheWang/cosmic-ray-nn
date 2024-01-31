@@ -7,6 +7,7 @@ mass_all = np.array([])
 lgdEdXmx_all = np.array([])
 zenith_all = np.array([])
 integral_all = np.array([])
+Xmx_all = np.array([])
 X_all = []
 dEdX_all = []
 
@@ -49,7 +50,6 @@ for i in range(1, 6):
         # p2cx=tshowercx["p2"].array()
         # p3cx=tshowercx["p3"].array()
         # chi2cx=tshowercx["chi2"].array()
-        # Xmxcx=tshowercx["Xmx"].array()
         # Nmxcx=tshowercx["Nmx"].array()
         # XmxdEdXcx=tshowercx["XmxdEdX"].array()
         # dEdXmxcx=tshowercx["dEdXmx"].array()
@@ -61,6 +61,8 @@ for i in range(1, 6):
 
         zenithcx=tshowercx["zenith"].array()
         zenith_all = np.append(zenith_all, zenithcx)
+        Xmxcx=tshowercx["Xmx"].array()
+        Xmx_all = np.append(Xmx_all, Xmxcx)
         Xcx=tshowercx["X"].array()
         dEdX=tshowercx["dEdX"].array()
 
@@ -82,8 +84,8 @@ for i in range(1, 6):
                     noise = np.random.normal(noise_mean, noise_std)
                     vals_with_noise.append(dE_arr[dE_index] + noise)
                 dE_arr = vals_with_noise
-            # Rescale logarithmically
             
+            # Rescale logarithmically
             dE_arr = [0 if x<=1 else math.log(x) for x in dE_arr]
             dEdX_all.append(dE_arr)
 
@@ -108,10 +110,16 @@ X_all = np.array(X_all, dtype=object)
 # max_val_Emx = np.max(lgdEdXmx_all, axis=0)
 # lgdEdXmx_all = (lgdEdXmx_all - min_val_Emx) / (max_val_Emx - min_val_Emx)
 
-# # Normalize zenith angle between 0 and 1(should this be normalized?)
+# Normalize zenith angle between 0 and 1(should this be normalized?)
 # min_val_zen = np.min(zenith_all, axis=0)
 # max_val_zen = np.max(zenith_all, axis=0)
 # zenith_all = (zenith_all - min_val_zen) / (max_val_zen - min_val_zen)
+
+# # Normalize X between 0 and 1(should this be normalized?)
+# flattened_X_all = np.concatenate(X_all)
+# min_val_X = np.min(flattened_X_all)
+# max_val_X = np.max(flattened_X_all)
+# X_all = [[(X - min_val_X) / (max_val_X - min_val_X) for X in entry] for entry in X_all]
 
 # Pad X and dEdX
 max_len = np.max([len(arr) for arr in dEdX_all])
@@ -120,12 +128,13 @@ dEdX_all = [np.pad(arr, (0, max_len-len(arr))) for arr in dEdX_all]
 
 print(f'Mass shape: {np.shape(mass_all)}')
 print(f'Zenith shape: {np.shape(zenith_all)}')
+print(f'Xmx shape: {np.shape(Xmx_all)}')
 print(f'X shape: {np.shape(X_all)}')
 print(f'dEdX shape: {np.shape(dEdX_all)}')
 
 
 # Save the arrays to an npz file
 if noise:
-    np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)    
+    np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)    
 else:
-    np.savez('/DataFast/zwang/data_small.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)
+    np.savez('/DataFast/zwang/data_small.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)
