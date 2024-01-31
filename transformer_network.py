@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import os
+from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D
 from keras.models import Model
 from keras.optimizers import Adam
@@ -9,7 +10,7 @@ from keras.optimizers import Adam
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data.npz'
+preprocessed_data = 'DataFast/zwang/data_small.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -27,7 +28,7 @@ zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices.npz'
+indicesFile = 'DataFast/zwang/train_indices_small.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -101,7 +102,23 @@ dropout = 0.1  # Dropout rate
 model = build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout)
 
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-model.fit(x_train, y_train, batch_size=32, epochs=1, validation_split=0.2)
+fit = model.fit(x_train, y_train, batch_size=32, epochs=3, validation_split=0.2)
+
+# Plot training curves
+fig, ax = plt.subplots(1, figsize=(8,5))
+n = np.arange(len(fit.history['loss']))
+
+ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
+ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
+
+ax.set_xlabel('Epoch')
+ax.set_ylabel('Loss')
+ax.legend()
+ax.semilogy()
+ax.grid()
+plt.title('Training and Validation Loss')
+
+plt.savefig('home/zwang/cosmic-ray-nn/training_curves.png')
 
 # Analyze performance
 mass_pred = model.predict(x_test)
