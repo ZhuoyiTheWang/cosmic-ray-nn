@@ -100,21 +100,19 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
 
 # Transformer hyperparameters  
 hyperparameters = {
-    'head_size': [16], # Size of each attention head
-    'num_heads': [8], # Number of attention heads
-    'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
-    'num_layers': [3], # Number of transformer layers
+    'head_size': [1], # Size of each attention head
+    'num_heads': [1], # Number of attention heads
+    'ff_dim': [128], # Hidden layer size in feed forward network inside transformer
+    'num_layers': [1], # Number of transformer layers
     'dropout': [0.1], # Dropout rate
-    'batch_size': [64] # Batch size
+    'batch_size': [32, 64] # Batch size
 }
-
-adam_optimizer = Adam(learning_rate=0.001)
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
-    model.compile(optimizer=adam_optimizer, loss='mean_squared_error', metrics=['mean_absolute_error'])
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=30, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -123,22 +121,45 @@ best_model = None
 best_fit = None
 best_validation_loss = np.inf
 best_hp = {}
+hyperparameter_iterator = 1
+
+with open('home/zwang/cosmic-ray-nn/training_params.txt', 'w') as file:
+    file.write(f"Training Details:")
 
 for hp_values in product(*hyperparameters.values()):
     hp = dict(zip(hyperparameters.keys(), hp_values))
     print(f"Training with hyperparameters: {hp}")
     model, validation_loss, fit = train_and_evaluate_model(hp)
-    
+    with open('home/zwang/cosmic-ray-nn/training_params.txt', 'a') as file:
+        file.write(f"\nCurrent model: {hyperparameter_iterator}, val_loss: {validation_loss}, hyperparameters: {hp}")
+
+    # Plot training curves
+    fig, ax = plt.subplots(1, figsize=(8,5))
+    n = np.arange(len(fit.history['loss']))
+
+    ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
+    ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.legend()
+    ax.semilogy()
+    ax.grid()
+    plt.title('Training and Validation Loss')
+    plt.savefig(f"home/zwang/cosmic-ray-nn/training_curves/model{hyperparameter_iterator}.png")
+
+    hyperparameter_iterator += 1
+
     # Update the best model if current model is better
     if validation_loss < best_validation_loss:
         best_validation_loss = validation_loss
         best_model = model
         best_fit = fit
         best_hp = hp
-        # Save the best model
-        best_model.save('home/zwang/comsic-ray-nn/best_model.h5')
+        # Announce the new best model
         print(f"New best model with val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
+# Save the best model
+best_model.save('home/zwang/cosmic-ray-nn/best_model.h5')
 print(f"Best model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Plot training curves
@@ -147,20 +168,18 @@ n = np.arange(len(best_fit.history['loss']))
 
 ax.plot(n, best_fit.history['loss'], ls='--', c='k', label='loss')
 ax.plot(n, best_fit.history['val_loss'], label='val_loss', color='red')
-
-
 ax.set_xlabel('Epoch')
 ax.set_ylabel('Loss')
 ax.legend()
 ax.semilogy()
 ax.grid()
 plt.title('Training and Validation Loss')
+plt.savefig('home/zwang/cosmic-ray-nn/training_curves/best_model_training_curves.png')
 
-plt.savefig('home/zwang/cosmic-ray-nn/training_curves.png')
+with open('home/zwang/cosmic-ray-nn/best_params.txt', 'w') as file:
+    file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Analyze performance
-mass_pred = model.predict([x_test_sequential, x_test_singular])
-
-print(mass_pred.shape)
-
-mass_pred = mass_pred.reshape(len(y_test))
+# mass_pred = model.predict([x_test_sequential, x_test_singular])
+# print(mass_pred.shape)
+# mass_pred = mass_pred.reshape(len(y_test))
