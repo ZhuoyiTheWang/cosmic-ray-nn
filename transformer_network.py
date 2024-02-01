@@ -108,13 +108,13 @@ hyperparameters = {
     'batch_size': [64] # Batch size
 }
 
-adam_optimizer = Adam(learning_rate=0.01)
+adam_optimizer = Adam(learning_rate=0.001)
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
     model.compile(optimizer=adam_optimizer, loss='mean_squared_error', metrics=['mean_absolute_error'])
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=100, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=30, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
