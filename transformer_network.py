@@ -100,19 +100,19 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
 
 # Transformer hyperparameters  
 hyperparameters = {
-    'head_size': [1], # Size of each attention head
-    'num_heads': [1], # Number of attention heads
-    'ff_dim': [128], # Hidden layer size in feed forward network inside transformer
-    'num_layers': [1], # Number of transformer layers
+    'head_size': [4, 8, 16, 32], # Size of each attention head
+    'num_heads': [4, 8, 12, 20], # Number of attention heads
+    'ff_dim': [128, 256, 512], # Hidden layer size in feed forward network inside transformer
+    'num_layers': [1, 3, 5, 7], # Number of transformer layers
     'dropout': [0.1], # Dropout rate
-    'batch_size': [32, 64] # Batch size
+    'batch_size': [50, 100, 300] # Batch size
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=25, validation_split=0.2)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 

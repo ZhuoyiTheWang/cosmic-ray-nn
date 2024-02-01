@@ -1,3 +1,0 @@
-Training Details:
-Current model: 1, val_loss: 1.4523711204528809, hyperparameters: {'head_size': 1, 'num_heads': 1, 'ff_dim': 128, 'num_layers': 1, 'dropout': 0.1, 'batch_size': 32}
-Current model: 2, val_loss: 2.303363561630249, hyperparameters: {'head_size': 1, 'num_heads': 1, 'ff_dim': 128, 'num_layers': 1, 'dropout': 0.1, 'batch_size': 64}

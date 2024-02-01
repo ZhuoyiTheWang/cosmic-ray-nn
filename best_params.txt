@@ -1,2 +1,0 @@
-
-Best model val_loss: 1.4523711204528809, hyperparameters: {'head_size': 1, 'num_heads': 1, 'ff_dim': 128, 'num_layers': 1, 'dropout': 0.1, 'batch_size': 32}
