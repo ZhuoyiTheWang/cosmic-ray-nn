@@ -11,7 +11,7 @@ from itertools import product
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data_small.npz'
+preprocessed_data = 'DataFast/zwang/data.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -28,7 +28,7 @@ sequential_features = np.stack([X, dEdX], axis=-1)
 singular_feartures = np.stack([Xmx, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_small.npz'
+indicesFile = 'DataFast/zwang/train_indices.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -100,19 +100,19 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
 
 # Transformer hyperparameters  
 hyperparameters = {
-    'ff_dim': [128, 256, 512], # Hidden layer size in feed forward network inside transformer
+    'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
-    'batch_size': [32, 64], # Batch size
-    'num_layers': [1, 3, 5, 7, 9], # Number of transformer layers
-    'head_size': [4, 8, 16, 32], # Size of each attention head
-    'num_heads': [4, 8, 12, 20] # Number of attention heads
+    'batch_size': [32], # Batch size
+    'num_layers': [1], # Number of transformer layers
+    'head_size': [4], # Size of each attention head
+    'num_heads': [4] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=25, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=300, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -123,14 +123,14 @@ best_validation_loss = np.inf
 best_hp = {}
 hyperparameter_iterator = 1
 
-with open('home/zwang/cosmic-ray-nn/training_params.txt', 'w') as file:
+with open('home/zwang/cosmic-ray-nn/training_curves/training_params.txt', 'w') as file:
     file.write(f"Training Details:")
 
 for hp_values in product(*hyperparameters.values()):
     hp = dict(zip(hyperparameters.keys(), hp_values))
     print(f"Training with hyperparameters: {hp}")
     model, validation_loss, fit = train_and_evaluate_model(hp)
-    with open('home/zwang/cosmic-ray-nn/training_params.txt', 'a') as file:
+    with open('home/zwang/cosmic-ray-nn/training_curves/training_params.txt', 'a') as file:
         file.write(f"\nCurrent model: {hyperparameter_iterator}, val_loss: {validation_loss}, hyperparameters: {hp}")
 
     # Plot training curves
@@ -176,7 +176,7 @@ ax.grid()
 plt.title('Training and Validation Loss')
 plt.savefig('home/zwang/cosmic-ray-nn/training_curves/best_model_training_curves.png')
 
-with open('home/zwang/cosmic-ray-nn/best_params.txt', 'w') as file:
+with open('home/zwang/cosmic-ray-nn/training_curves/best_params.txt', 'w') as file:
     file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Analyze performance
