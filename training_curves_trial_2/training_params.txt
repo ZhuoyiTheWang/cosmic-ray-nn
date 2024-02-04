@@ -43,3 +43,4 @@ Current model: 41, val_loss: 1.2588937282562256, hyperparameters: {'ff_dim': 128
 Current model: 42, val_loss: 1.260138750076294, hyperparameters: {'ff_dim': 128, 'dropout': 0.1, 'batch_size': 32, 'num_layers': 5, 'head_size': 16, 'num_heads': 8}
 Current model: 43, val_loss: 1.259677767753601, hyperparameters: {'ff_dim': 128, 'dropout': 0.1, 'batch_size': 32, 'num_layers': 5, 'head_size': 16, 'num_heads': 12}
 Current model: 44, val_loss: 1.2589683532714844, hyperparameters: {'ff_dim': 128, 'dropout': 0.1, 'batch_size': 32, 'num_layers': 5, 'head_size': 16, 'num_heads': 20}
+Current model: 45, val_loss: 1.258913516998291, hyperparameters: {'ff_dim': 128, 'dropout': 0.1, 'batch_size': 32, 'num_layers': 5, 'head_size': 32, 'num_heads': 4}
