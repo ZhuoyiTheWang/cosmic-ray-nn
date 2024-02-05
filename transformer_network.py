@@ -44,29 +44,29 @@ y_test = mass[indices_test]
 sequence_len = sequential_features.shape[1]  # Number of events in the sequence
 sequential_feature_size = 2  # Number of features per time step (X, dEdX)
 
-class PositionalEncoding(Layer):
-    def __init__(self, sequence_len, d_model, **kwargs):
-        super(PositionalEncoding, self).__init__(**kwargs)
-        self.pos_encoding = self.positional_encoding(sequence_len, d_model)
+# class PositionalEncoding(Layer):
+#     def __init__(self, sequence_len, d_model, **kwargs):
+#         super(PositionalEncoding, self).__init__(**kwargs)
+#         self.pos_encoding = self.positional_encoding(sequence_len, d_model)
 
-    def get_angles(self, position, i, d_model):
-        angles = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
-        return position * angles
+#     def get_angles(self, position, i, d_model):
+#         angles = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+#         return position * angles
 
-    def positional_encoding(self, position, d_model):
-        angle_rads = self.get_angles(np.arange(position)[:, np.newaxis],
-                                     np.arange(d_model)[np.newaxis, :],
-                                     d_model)
-        # Apply sin to even indices in the array; 2i
-        sines = np.sin(angle_rads[:, 0::2])
-        # Apply cos to odd indices in the array; 2i+1
-        cosines = np.cos(angle_rads[:, 1::2])
-        pos_encoding = np.concatenate([sines, cosines], axis=-1)
-        pos_encoding = pos_encoding[np.newaxis, ...]
-        return tf.cast(pos_encoding, dtype=tf.float32)
+#     def positional_encoding(self, position, d_model):
+#         angle_rads = self.get_angles(np.arange(position)[:, np.newaxis],
+#                                      np.arange(d_model)[np.newaxis, :],
+#                                      d_model)
+#         # Apply sin to even indices in the array; 2i
+#         sines = np.sin(angle_rads[:, 0::2])
+#         # Apply cos to odd indices in the array; 2i+1
+#         cosines = np.cos(angle_rads[:, 1::2])
+#         pos_encoding = np.concatenate([sines, cosines], axis=-1)
+#         pos_encoding = pos_encoding[np.newaxis, ...]
+#         return tf.cast(pos_encoding, dtype=tf.float32)
 
-    def call(self, inputs):
-        return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
+#     def call(self, inputs):
+#         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
     # Normalization and Attention
@@ -87,7 +87,7 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
     singular_input = Input(shape=(2,))
 
     x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
-    x = PositionalEncoding(sequence_len, feature_size)(x)
+    # x = PositionalEncoding(sequence_len, feature_size)(x)
     for _ in range(num_layers):
         x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
@@ -103,16 +103,16 @@ hyperparameters = {
     'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'num_layers': [1], # Number of transformer layers
-    'head_size': [4], # Size of each attention head
-    'num_heads': [4] # Number of attention heads
+    'num_layers': [24], # Number of transformer layers
+    'head_size': [8], # Size of each attention head
+    'num_heads': [8] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
     model.compile(optimizer='adam', loss='mean_squared_error')
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=300, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=20, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -132,21 +132,11 @@ for hp_values in product(*hyperparameters.values()):
     model, validation_loss, fit = train_and_evaluate_model(hp)
     with open('home/zwang/cosmic-ray-nn/training_curves/training_params.txt', 'a') as file:
         file.write(f"\nCurrent model: {hyperparameter_iterator}, val_loss: {validation_loss}, hyperparameters: {hp}")
-
-    # Plot training curves
-    fig, ax = plt.subplots(1, figsize=(8,5))
-    n = np.arange(len(fit.history['loss']))
-
-    ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
-    ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.legend()
-    ax.semilogy()
-    ax.grid()
-    plt.title('Training and Validation Loss')
-    plt.savefig(f"home/zwang/cosmic-ray-nn/training_curves/model{hyperparameter_iterator}.png")
-
+    
+    with open(f'home/zwang/cosmic-ray-nn/training_curves/training_history{hyperparameter_iterator}.txt', 'w') as file:
+        for loss, val_loss in zip(fit.history['loss'], fit.history['val_loss']):
+            file.write(f'{loss} {val_loss}\n')
+    
     hyperparameter_iterator += 1
 
     # Update the best model if current model is better
@@ -180,6 +170,9 @@ with open('home/zwang/cosmic-ray-nn/training_curves/best_params.txt', 'w') as fi
     file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Analyze performance
-# mass_pred = model.predict([x_test_sequential, x_test_singular])
-# print(mass_pred.shape)
-# mass_pred = mass_pred.reshape(len(y_test))
+mass_pred = model.predict([x_test_sequential, x_test_singular])
+mass_pred = mass_pred.reshape(len(y_test))
+    
+with open(f'home/zwang/cosmic-ray-nn/training_curves/predictions.txt', 'w') as file:
+        for actual, predicted in zip(y_test, mass_pred):
+            file.write(f'Actual: {actual}, Predicted: {predicted}\n')
