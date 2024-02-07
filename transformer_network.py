@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import os
 from matplotlib import pyplot as plt
-from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking
+from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
 from itertools import product
@@ -11,7 +11,7 @@ from itertools import product
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data.npz'
+preprocessed_data = 'DataFast/zwang/data_small.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -28,7 +28,7 @@ sequential_features = np.stack([X, dEdX], axis=-1)
 singular_feartures = np.stack([Xmx, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices.npz'
+indicesFile = 'DataFast/zwang/train_indices_small.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -84,7 +84,7 @@ def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
 
 def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout=0.1):
     sequence_input = Input(shape=(sequence_len, feature_size))
-    singular_input = Input(shape=(2,))
+    # singular_input = Input(shape=(2,))
 
     x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
     # x = PositionalEncoding(sequence_len, feature_size)(x)
@@ -92,27 +92,29 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_la
         x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
     x = LayerNormalization(epsilon=1e-6)(x)
-    x = GlobalAveragePooling1D()(x)
-    x = Concatenate()([x, singular_input])
+    x = Flatten()(x)
+    x = Dense(ff_dim, activation="elu")(x)
+    # x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
-    return Model(inputs = [sequence_input, singular_input], outputs = x)
+    return Model(inputs = [sequence_input], outputs = x)
 
 # Transformer hyperparameters  
 hyperparameters = {
     'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'num_layers': [24], # Number of transformer layers
-    'head_size': [8], # Size of each attention head
-    'num_heads': [8] # Number of attention heads
+    'num_layers': [1], # Number of transformer layers
+    'head_size': [4], # Size of each attention head
+    'num_heads': [4] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
+    optimizer = Adam(learning_rate= 0.0001)
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    fit = model.fit([x_train_sequential, x_train_singular], y_train, batch_size=hp['batch_size'], epochs=20, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    model.compile(optimizer=optimizer, loss='mean_squared_error')
+    fit = model.fit([x_train_sequential], y_train, batch_size=hp['batch_size'], epochs=300, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -170,7 +172,7 @@ with open('home/zwang/cosmic-ray-nn/training_curves/best_params.txt', 'w') as fi
     file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Analyze performance
-mass_pred = model.predict([x_test_sequential, x_test_singular])
+mass_pred = model.predict([x_test_sequential])
 mass_pred = mass_pred.reshape(len(y_test))
     
 with open(f'home/zwang/cosmic-ray-nn/training_curves/predictions.txt', 'w') as file:

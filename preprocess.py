@@ -15,7 +15,7 @@ noise = False # Whether to add noise to dEdX values
 
 num_files = 0
 # Open files in each folder
-for i in range(0, 14):
+for i in range(1, 6):
     foldername = f'/Data/Simulations/Conex_Flat_lnA/EPOS/Conex_170-205_Prod{i}/showers/*.root'
     print(foldername)
     for filename in glob.glob(foldername):
@@ -137,4 +137,4 @@ print(f'dEdX shape: {np.shape(dEdX_all)}')
 if noise:
     np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)    
 else:
-    np.savez('/DataFast/zwang/data.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)
+    np.savez('/DataFast/zwang/data_small.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)
