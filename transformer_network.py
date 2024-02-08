@@ -78,7 +78,7 @@ def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim)(x)
+    x = Dense(ff_dim, activation='relu')(x)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res
@@ -92,7 +92,7 @@ def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dr
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim)(res)
+    x = Dense(ff_dim, activation='relu')(res)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res  # Add & Norm again
@@ -112,7 +112,8 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_en
 
     x = LayerNormalization(epsilon=1e-6)(decoder_output)
     x = Flatten()(x)
-    x = Dense(2048)(x)
+    x = Dense(1024, activation='relu')(x)
+    x = Dense(512, activation='relu')(x)
     # x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
