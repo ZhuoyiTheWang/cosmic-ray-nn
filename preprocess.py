@@ -115,11 +115,11 @@ X_all = np.array(X_all, dtype=object)
 # max_val_zen = np.max(zenith_all, axis=0)
 # zenith_all = (zenith_all - min_val_zen) / (max_val_zen - min_val_zen)
 
-# # Normalize X between 0 and 1(should this be normalized?)
-# flattened_X_all = np.concatenate(X_all)
-# min_val_X = np.min(flattened_X_all)
-# max_val_X = np.max(flattened_X_all)
-# X_all = [[(X - min_val_X) / (max_val_X - min_val_X) for X in entry] for entry in X_all]
+# Normalize X between 0 and 1(should this be normalized?)
+flattened_X_all = np.concatenate(X_all)
+min_val_X = np.min(flattened_X_all)
+max_val_X = np.max(flattened_X_all)
+X_all = [[(X - min_val_X) / (max_val_X - min_val_X) for X in entry] for entry in X_all]
 
 # Pad X and dEdX
 max_len = np.max([len(arr) for arr in dEdX_all])

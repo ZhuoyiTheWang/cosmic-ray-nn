@@ -24,8 +24,9 @@ X = f['x']
 dEdX = f['dEdX']
 
 # Format data
-sequential_features = np.stack([X, dEdX], axis=-1)
-singular_feartures = np.stack([Xmx, zen], axis=-1)
+zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
+sequential_features = np.stack([X, dEdX, zen], axis=-1)
+# singular_feartures = np.stack([Xmx, zen], axis=-1)
 
 # Split the data into training and test sets
 indicesFile = 'DataFast/zwang/train_indices_small.npz'
@@ -36,13 +37,13 @@ indices_test = indices['indices_test']
 # Split the non-array data into train and test
 x_train_sequential = sequential_features[indices_train]
 x_test_sequential = sequential_features[indices_test]
-x_train_singular = singular_feartures[indices_train]
-x_test_singular = singular_feartures[indices_test]
+# x_train_singular = singular_feartures[indices_train]
+# x_test_singular = singular_feartures[indices_test]
 y_train = mass[indices_train]
 y_test = mass[indices_test]
 
 sequence_len = sequential_features.shape[1]  # Number of events in the sequence
-sequential_feature_size = 2  # Number of features per time step (X, dEdX)
+sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 
 # class PositionalEncoding(Layer):
 #     def __init__(self, sequence_len, d_model, **kwargs):
@@ -71,50 +72,69 @@ sequential_feature_size = 2  # Number of features per time step (X, dEdX)
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
     # Normalization and Attention
     x = LayerNormalization(epsilon=1e-6)(inputs)
-    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x,x)
+    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, x, x)
     x = Dropout(dropout)(x)
     res = x + inputs
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim, activation="elu")(x)
+    x = Dense(ff_dim)(x)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res
 
-def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_layers, dropout=0.1):
+def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dropout):
+    # Encoder-Decoder Attention (cross-attention)
+    x = LayerNormalization(epsilon=1e-6)(inputs)
+    x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, encoder_output, encoder_output)
+    x = Dropout(dropout)(x)
+    res = x + inputs 
+
+    # Feed Forward Part
+    x = LayerNormalization(epsilon=1e-6)(res)
+    x = Dense(ff_dim)(res)
+    x = Dropout(dropout)(x)
+    x = Dense(inputs.shape[-1])(x)
+    return x + res  # Add & Norm again
+
+def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout=0.1):
     sequence_input = Input(shape=(sequence_len, feature_size))
     # singular_input = Input(shape=(2,))
-
-    x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
+    # x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
     # x = PositionalEncoding(sequence_len, feature_size)(x)
-    for _ in range(num_layers):
-        x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
+    encoder_output = sequence_input
+    for _ in range(num_encoder_layers):
+        encoder_output = transformer_encoder(encoder_output, head_size, num_heads, ff_dim, dropout)
 
-    x = LayerNormalization(epsilon=1e-6)(x)
+    decoder_output = encoder_output
+    for _ in range(num_decoder_layers):
+        decoder_output = transformer_decoder(decoder_output, encoder_output, head_size, num_heads, ff_dim, dropout)
+
+    x = LayerNormalization(epsilon=1e-6)(decoder_output)
     x = Flatten()(x)
-    x = Dense(ff_dim, activation="elu")(x)
+    x = Dense(2048)(x)
     # x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
-    return Model(inputs = [sequence_input], outputs = x)
+    return Model(inputs = sequence_input, outputs = x)
 
 # Transformer hyperparameters  
 hyperparameters = {
-    'ff_dim': [256], # Hidden layer size in feed forward network inside transformer
+    'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'num_layers': [1], # Number of transformer layers
-    'head_size': [4], # Size of each attention head
-    'num_heads': [4] # Number of attention heads
+    'num_encoder_layers': [4], # Number of transformer encoder layers
+    'num_decoder_layers' : [5], # Number of transformer decoder layers
+    'head_size': [64], # Size of each attention head
+    'num_heads': [8] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
-    optimizer = Adam(learning_rate= 0.0001)
-    model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_layers'], hp['dropout'])
+    optimizer = Adam()
+    model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit([x_train_sequential], y_train, batch_size=hp['batch_size'], epochs=300, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=150, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -151,7 +171,7 @@ for hp_values in product(*hyperparameters.values()):
         print(f"New best model with val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Save the best model
-best_model.save('home/zwang/cosmic-ray-nn/best_model.h5')
+best_model.save('home/zwang/cosmic-ray-nn/training_curves/best_model.h5')
 print(f"Best model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Plot training curves
