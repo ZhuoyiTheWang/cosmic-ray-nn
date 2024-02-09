@@ -69,7 +69,7 @@ sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 #     def call(self, inputs):
 #         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
-def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout, activation):
     # Normalization and Attention
     x = LayerNormalization(epsilon=1e-6)(inputs)
     x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, x, x)
@@ -78,12 +78,12 @@ def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout):
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim, activation='relu')(x)
+    x = Dense(ff_dim, activation=activation)(x)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res
 
-def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dropout):
+def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dropout, activation):
     # Encoder-Decoder Attention (cross-attention)
     x = LayerNormalization(epsilon=1e-6)(inputs)
     x = MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(x, encoder_output, encoder_output)
@@ -92,28 +92,28 @@ def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dr
 
     # Feed Forward Part
     x = LayerNormalization(epsilon=1e-6)(res)
-    x = Dense(ff_dim, activation='relu')(res)
+    x = Dense(ff_dim, activation=activation)(x)
     x = Dropout(dropout)(x)
     x = Dense(inputs.shape[-1])(x)
     return x + res  # Add & Norm again
 
-def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout=0.1):
+def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation):
     sequence_input = Input(shape=(sequence_len, feature_size))
     # singular_input = Input(shape=(2,))
     # x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
     # x = PositionalEncoding(sequence_len, feature_size)(x)
     encoder_output = sequence_input
     for _ in range(num_encoder_layers):
-        encoder_output = transformer_encoder(encoder_output, head_size, num_heads, ff_dim, dropout)
+        encoder_output = transformer_encoder(encoder_output, head_size, num_heads, ff_dim, dropout, activation)
 
     decoder_output = encoder_output
     for _ in range(num_decoder_layers):
-        decoder_output = transformer_decoder(decoder_output, encoder_output, head_size, num_heads, ff_dim, dropout)
+        decoder_output = transformer_decoder(decoder_output, encoder_output, head_size, num_heads, ff_dim, dropout, activation)
 
     x = LayerNormalization(epsilon=1e-6)(decoder_output)
     x = Flatten()(x)
-    x = Dense(1024, activation='relu')(x)
-    x = Dense(512, activation='relu')(x)
+    x = Dense(1024, activation=activation)(x)
+    x = Dense(512, activation=activation)(x)
     # x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
@@ -124,18 +124,19 @@ hyperparameters = {
     'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'num_encoder_layers': [4], # Number of transformer encoder layers
-    'num_decoder_layers' : [5], # Number of transformer decoder layers
+    'activation': ['elu'], # Activation function
+    'num_encoder_layers': [16], # Number of transformer encoder layers
+    'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
-    optimizer = Adam()
-    model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'])
+    optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=150, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=80, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
