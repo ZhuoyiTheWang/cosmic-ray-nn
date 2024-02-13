@@ -1,1 +1,0 @@
-Changed GlobalAveragePooling to Flatten, 300 epochs, learning rate: 0.001

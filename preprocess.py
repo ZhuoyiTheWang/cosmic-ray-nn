@@ -7,7 +7,6 @@ mass_all = np.array([])
 lgdEdXmx_all = np.array([])
 zenith_all = np.array([])
 integral_all = np.array([])
-Xmx_all = np.array([])
 X_all = []
 dEdX_all = []
 
@@ -15,7 +14,7 @@ noise = False # Whether to add noise to dEdX values
 
 num_files = 0
 # Open files in each folder
-for i in range(1, 6):
+for i in range(1, 3):
     foldername = f'/Data/Simulations/Conex_Flat_lnA/EPOS/Conex_170-205_Prod{i}/showers/*.root'
     print(foldername)
     for filename in glob.glob(foldername):
@@ -61,8 +60,6 @@ for i in range(1, 6):
 
         zenithcx=tshowercx["zenith"].array()
         zenith_all = np.append(zenith_all, zenithcx)
-        Xmxcx=tshowercx["Xmx"].array()
-        Xmx_all = np.append(Xmx_all, Xmxcx)
         Xcx=tshowercx["X"].array()
         dEdX=tshowercx["dEdX"].array()
 
@@ -110,16 +107,22 @@ X_all = np.array(X_all, dtype=object)
 # max_val_Emx = np.max(lgdEdXmx_all, axis=0)
 # lgdEdXmx_all = (lgdEdXmx_all - min_val_Emx) / (max_val_Emx - min_val_Emx)
 
-# Normalize zenith angle between 0 and 1(should this be normalized?)
-# min_val_zen = np.min(zenith_all, axis=0)
-# max_val_zen = np.max(zenith_all, axis=0)
-# zenith_all = (zenith_all - min_val_zen) / (max_val_zen - min_val_zen)
+# Normalize zenith angle between 0 and 1
+min_val_zen = np.min(zenith_all, axis=0)
+max_val_zen = np.max(zenith_all, axis=0)
+zenith_all = (zenith_all - min_val_zen) / (max_val_zen - min_val_zen)
 
-# Normalize X between 0 and 1(should this be normalized?)
+print(f"Min Zenith Angle: {min_val_zen}")
+print(f"Max Zenith Angle: {max_val_zen}")
+
+# Normalize X between 0 and 1
 flattened_X_all = np.concatenate(X_all)
 min_val_X = np.min(flattened_X_all)
 max_val_X = np.max(flattened_X_all)
 X_all = [[(X - min_val_X) / (max_val_X - min_val_X) for X in entry] for entry in X_all]
+
+print(f"Min X:{min_val_X}")
+print(f"Max X:{max_val_X}")
 
 # Pad X and dEdX
 max_len = np.max([len(arr) for arr in dEdX_all])
@@ -128,13 +131,12 @@ dEdX_all = [np.pad(arr, (0, max_len-len(arr))) for arr in dEdX_all]
 
 print(f'Mass shape: {np.shape(mass_all)}')
 print(f'Zenith shape: {np.shape(zenith_all)}')
-print(f'Xmx shape: {np.shape(Xmx_all)}')
 print(f'X shape: {np.shape(X_all)}')
 print(f'dEdX shape: {np.shape(dEdX_all)}')
 
 
 # Save the arrays to an npz file
 if noise:
-    np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)    
+    np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)    
 else:
-    np.savez('/DataFast/zwang/data_small.npz', mass=mass_all, zenith=zenith_all, Xmx = Xmx_all, x=X_all, dEdX=dEdX_all)
+    np.savez('/DataFast/zwang/data_one_prod.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)

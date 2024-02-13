@@ -147,17 +147,17 @@ best_validation_loss = np.inf
 best_hp = {}
 hyperparameter_iterator = 1
 
-with open('home/zwang/cosmic-ray-nn/training_curves/training_params.txt', 'w') as file:
+with open('home/zwang/cosmic-ray-nn/training/training_curves/training_params.txt', 'w') as file:
     file.write(f"Training Details:")
 
 for hp_values in product(*hyperparameters.values()):
     hp = dict(zip(hyperparameters.keys(), hp_values))
     print(f"Training with hyperparameters: {hp}")
     model, validation_loss, fit = train_and_evaluate_model(hp)
-    with open('home/zwang/cosmic-ray-nn/training_curves/training_params.txt', 'a') as file:
+    with open('home/zwang/cosmic-ray-nn/training/training_curves/training_params.txt', 'a') as file:
         file.write(f"\nCurrent model: {hyperparameter_iterator}, val_loss: {validation_loss}, hyperparameters: {hp}")
     
-    with open(f'home/zwang/cosmic-ray-nn/training_curves/training_history{hyperparameter_iterator}.txt', 'w') as file:
+    with open(f'home/zwang/cosmic-ray-nn/training/training_curves/training_history{hyperparameter_iterator}.txt', 'w') as file:
         for loss, val_loss in zip(fit.history['loss'], fit.history['val_loss']):
             file.write(f'{loss} {val_loss}\n')
     
@@ -173,7 +173,7 @@ for hp_values in product(*hyperparameters.values()):
         print(f"New best model with val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Save the best model
-best_model.save('home/zwang/cosmic-ray-nn/training_curves/best_model.h5')
+best_model.save('home/zwang/cosmic-ray-nn/training/training_curves/best_model.h5')
 print(f"Best model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Plot training curves
@@ -188,15 +188,15 @@ ax.legend()
 ax.semilogy()
 ax.grid()
 plt.title('Training and Validation Loss')
-plt.savefig('home/zwang/cosmic-ray-nn/training_curves/best_model_training_curves.png')
+plt.savefig('home/zwang/cosmic-ray-nn/training/training_curves/best_model_training_curves.png')
 
-with open('home/zwang/cosmic-ray-nn/training_curves/best_params.txt', 'w') as file:
+with open('home/zwang/cosmic-ray-nn/training/training_curves/best_params.txt', 'w') as file:
     file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
 
 # Analyze performance
 mass_pred = model.predict([x_test_sequential])
 mass_pred = mass_pred.reshape(len(y_test))
     
-with open(f'home/zwang/cosmic-ray-nn/training_curves/predictions.txt', 'w') as file:
+with open(f'home/zwang/cosmic-ray-nn/training/training_curves/predictions.txt', 'w') as file:
         for actual, predicted in zip(y_test, mass_pred):
             file.write(f'Actual: {actual}, Predicted: {predicted}\n')
