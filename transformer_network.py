@@ -5,13 +5,14 @@ from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping
 from itertools import product
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data_small.npz'
+preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -19,17 +20,15 @@ f = np.load(preprocessed_data, allow_pickle=True)
 # Extract variables from file
 mass = f['mass']
 zen = f['zenith']
-Xmx = f['Xmx']
 X = f['x']
 dEdX = f['dEdX']
 
 # Format data
 zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 sequential_features = np.stack([X, dEdX, zen], axis=-1)
-# singular_feartures = np.stack([Xmx, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_small.npz'
+indicesFile = 'DataFast/zwang/train_indices_two_prods.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -125,7 +124,7 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [16], # Number of transformer encoder layers
+    'num_encoder_layers': [32], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
@@ -134,9 +133,11 @@ hyperparameters = {
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=20, mode='min', restore_best_weights=True)
+
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=300, validation_split=0.25)  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -190,8 +191,11 @@ ax.grid()
 plt.title('Training and Validation Loss')
 plt.savefig('home/zwang/cosmic-ray-nn/training/training_curves/best_model_training_curves.png')
 
+best_epoch = np.argmin(best_fit.history['val_loss']) + 1
+terminal_epoch = len(best_fit.history['val_loss'])
+
 with open('home/zwang/cosmic-ray-nn/training/training_curves/best_params.txt', 'w') as file:
-    file.write(f"\nBest model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
+    file.write(f"\nBest model val_loss: {best_validation_loss} at epoch {best_epoch}, terminated at epoch {terminal_epoch}, hyperparameters: {best_hp}")
 
 # Analyze performance
 mass_pred = model.predict([x_test_sequential])

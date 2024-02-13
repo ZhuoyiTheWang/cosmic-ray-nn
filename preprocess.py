@@ -121,8 +121,8 @@ min_val_X = np.min(flattened_X_all)
 max_val_X = np.max(flattened_X_all)
 X_all = [[(X - min_val_X) / (max_val_X - min_val_X) for X in entry] for entry in X_all]
 
-print(f"Min X:{min_val_X}")
-print(f"Max X:{max_val_X}")
+print(f"Min X: {min_val_X}")
+print(f"Max X: {max_val_X}")
 
 # Pad X and dEdX
 max_len = np.max([len(arr) for arr in dEdX_all])
@@ -139,4 +139,4 @@ print(f'dEdX shape: {np.shape(dEdX_all)}')
 if noise:
     np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)    
 else:
-    np.savez('/DataFast/zwang/data_one_prod.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)
+    np.savez('/DataFast/zwang/data_two_prods.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)
