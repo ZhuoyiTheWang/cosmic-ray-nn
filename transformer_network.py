@@ -40,8 +40,6 @@ indices_test = indices['indices_test']
 # Split the non-array data into train and test
 x_train_sequential = sequential_features[indices_train]
 x_test_sequential = sequential_features[indices_test]
-# x_train_singular = singular_feartures[indices_train]
-# x_test_singular = singular_feartures[indices_test]
 y_train = mass[indices_train]
 y_test = mass[indices_test]
 
@@ -102,7 +100,6 @@ def transformer_decoder(inputs, encoder_output, head_size, num_heads, ff_dim, dr
 
 def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation):
     sequence_input = Input(shape=(sequence_len, feature_size))
-    # singular_input = Input(shape=(2,))
     # x = Masking(mask_value=0, input_shape=(sequence_len, feature_size))(sequence_input)
     # x = PositionalEncoding(sequence_len, feature_size)(x)
     encoder_output = sequence_input
@@ -117,7 +114,6 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_en
     x = Flatten()(x)
     x = Dense(1024, activation=activation)(x)
     x = Dense(512, activation=activation)(x)
-    # x = Concatenate()([x, singular_input])
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
     return Model(inputs = sequence_input, outputs = x)
@@ -128,8 +124,8 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [1,2], # Number of transformer encoder layers
-    'num_decoder_layers' : [0], # Number of transformer decoder layers
+    'num_encoder_layers': [8, 16], # Number of transformer encoder layers
+    'num_decoder_layers' : [4, 8], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
 }
@@ -141,7 +137,7 @@ def train_and_evaluate_model(hp):
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=2, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
