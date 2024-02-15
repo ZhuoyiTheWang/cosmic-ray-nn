@@ -17,6 +17,10 @@ preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
 
+# Creates training folder to record information if not already exist
+directory = 'home/zwang/cosmic-ray-nn/training/training_details/'
+os.makedirs(directory, exist_ok=True)
+
 # Extract variables from file
 mass = f['mass']
 zen = f['zenith']
@@ -124,7 +128,7 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [32], # Number of transformer encoder layers
+    'num_encoder_layers': [1,2], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
@@ -137,70 +141,53 @@ def train_and_evaluate_model(hp):
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=2, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
-# Initialize variables to store the best model and its performance
-best_model = None
-best_fit = None
-best_validation_loss = np.inf
-best_hp = {}
+# Initialize hyperparameter iterator
 hyperparameter_iterator = 1
 
-with open('home/zwang/cosmic-ray-nn/training/training_curves/training_params.txt', 'w') as file:
+with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'w') as file:
     file.write(f"Training Details:")
 
 for hp_values in product(*hyperparameters.values()):
     hp = dict(zip(hyperparameters.keys(), hp_values))
     print(f"Training with hyperparameters: {hp}")
     model, validation_loss, fit = train_and_evaluate_model(hp)
-    with open('home/zwang/cosmic-ray-nn/training/training_curves/training_params.txt', 'a') as file:
-        file.write(f"\nCurrent model: {hyperparameter_iterator}, val_loss: {validation_loss}, hyperparameters: {hp}")
     
-    with open(f'home/zwang/cosmic-ray-nn/training/training_curves/training_history{hyperparameter_iterator}.txt', 'w') as file:
+    best_epoch = np.argmin(fit.history['val_loss']) + 1
+    terminal_epoch = len(fit.history['val_loss'])
+
+    with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'a') as file:
+        file.write(f"\nCurrent model: {hyperparameter_iterator}, min val_loss: {validation_loss} at epoch {best_epoch}, terminated at epoch {terminal_epoch}, hyperparameters: {hp}")
+    
+    with open(f'home/zwang/cosmic-ray-nn/training/training_details/training_history{hyperparameter_iterator}.txt', 'w') as file:
         for loss, val_loss in zip(fit.history['loss'], fit.history['val_loss']):
             file.write(f'{loss} {val_loss}\n')
     
-    hyperparameter_iterator += 1
-
-    # Update the best model if current model is better
-    if validation_loss < best_validation_loss:
-        best_validation_loss = validation_loss
-        best_model = model
-        best_fit = fit
-        best_hp = hp
-        # Announce the new best model
-        print(f"New best model with val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
-
-# Save the best model
-best_model.save('home/zwang/cosmic-ray-nn/training/training_curves/best_model.h5')
-print(f"Best model val_loss: {best_validation_loss}, hyperparameters: {best_hp}")
-
-# Plot training curves
-fig, ax = plt.subplots(1, figsize=(8,5))
-n = np.arange(len(best_fit.history['loss']))
-
-ax.plot(n, best_fit.history['loss'], ls='--', c='k', label='loss')
-ax.plot(n, best_fit.history['val_loss'], label='val_loss', color='red')
-ax.set_xlabel('Epoch')
-ax.set_ylabel('Loss')
-ax.legend()
-ax.semilogy()
-ax.grid()
-plt.title('Training and Validation Loss')
-plt.savefig('home/zwang/cosmic-ray-nn/training/training_curves/best_model_training_curves.png')
-
-best_epoch = np.argmin(best_fit.history['val_loss']) + 1
-terminal_epoch = len(best_fit.history['val_loss'])
-
-with open('home/zwang/cosmic-ray-nn/training/training_curves/best_params.txt', 'w') as file:
-    file.write(f"\nBest model val_loss: {best_validation_loss} at epoch {best_epoch}, terminated at epoch {terminal_epoch}, hyperparameters: {best_hp}")
-
-# Analyze performance
-mass_pred = model.predict([x_test_sequential])
-mass_pred = mass_pred.reshape(len(y_test))
+    model.save(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}.h5')
     
-with open(f'home/zwang/cosmic-ray-nn/training/training_curves/predictions.txt', 'w') as file:
-        for actual, predicted in zip(y_test, mass_pred):
-            file.write(f'Actual: {actual}, Predicted: {predicted}\n')
+    # Plot training curves
+    fig, ax = plt.subplots(1, figsize=(8,5))
+    n = np.arange(len(fit.history['loss']))
+
+    ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
+    ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.legend()
+    ax.semilogy()
+    ax.grid()
+    plt.title(f'Training and Validation Loss Model {hyperparameter_iterator}')
+    plt.savefig(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}_training_curves.png')
+
+    # Analyze performance
+    mass_pred = model.predict([x_test_sequential])
+    mass_pred = mass_pred.reshape(len(y_test))
+        
+    with open(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}_predictions.txt', 'w') as file:
+            for actual, predicted in zip(y_test, mass_pred):
+                file.write(f'Actual: {actual}, Predicted: {predicted}\n')
+    
+    hyperparameter_iterator += 1

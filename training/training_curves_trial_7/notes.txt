@@ -1,1 +1,0 @@
-Changed GlobalAveragePooling to Flatten

@@ -1,2 +1,0 @@
-
-Best model val_loss: 0.2752866744995117, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}
