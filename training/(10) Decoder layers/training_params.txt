@@ -1,0 +1,5 @@
+Training Details:
+Current model: 1, min val_loss: 0.49697721004486084 at epoch 63, terminated at epoch 83, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 8, 'num_decoder_layers': 4, 'head_size': 64, 'num_heads': 8}
+Current model: 2, min val_loss: 1.5033247470855713 at epoch 7, terminated at epoch 27, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 8, 'num_decoder_layers': 8, 'head_size': 64, 'num_heads': 8}
+Current model: 3, min val_loss: 1.5033661127090454 at epoch 6, terminated at epoch 26, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 16, 'num_decoder_layers': 4, 'head_size': 64, 'num_heads': 8}
+Current model: 4, min val_loss: 1.5034880638122559 at epoch 16, terminated at epoch 36, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 16, 'num_decoder_layers': 8, 'head_size': 64, 'num_heads': 8}
