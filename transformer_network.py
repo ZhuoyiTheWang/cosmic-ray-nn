@@ -124,16 +124,16 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [8, 16], # Number of transformer encoder layers
-    'num_decoder_layers' : [4, 8], # Number of transformer decoder layers
-    'head_size': [64], # Size of each attention head
-    'num_heads': [8] # Number of attention heads
+    'num_encoder_layers': [16], # Number of transformer encoder layers
+    'num_decoder_layers' : [0], # Number of transformer decoder layers
+    'head_size': [64, 128], # Size of each attention head
+    'num_heads': [8, 16] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
     optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-    early_stopping = EarlyStopping(monitor='val_loss', patience=20, mode='min', restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
