@@ -126,8 +126,8 @@ hyperparameters = {
     'activation': ['elu'], # Activation function
     'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
-    'head_size': [64, 128], # Size of each attention head
-    'num_heads': [8, 16] # Number of attention heads
+    'head_size': [64], # Size of each attention head
+    'num_heads': [4] # Number of attention heads
 }
 
 # Function to train a model and return the validation loss
