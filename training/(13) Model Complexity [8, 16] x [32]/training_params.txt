@@ -1,0 +1,3 @@
+Training Details:
+Current model: 1, min val_loss: 0.5752668976783752 at epoch 5, terminated at epoch 55, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 32, 'num_heads': 8}
+Current model: 2, min val_loss: 1.017008662223816 at epoch 59, terminated at epoch 109, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'elu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 32, 'num_heads': 16}
