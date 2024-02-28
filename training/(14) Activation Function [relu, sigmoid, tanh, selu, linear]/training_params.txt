@@ -1,0 +1,6 @@
+Training Details:
+Current model: 1, min val_loss: 0.5675355792045593 at epoch 286, terminated at epoch 336, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'relu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}
+Current model: 2, min val_loss: 1.5032389163970947 at epoch 28, terminated at epoch 78, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'sigmoid', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}
+Current model: 3, min val_loss: 1.5032389163970947 at epoch 3, terminated at epoch 53, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'tanh', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}
+Current model: 4, min val_loss: 0.18814103305339813 at epoch 205, terminated at epoch 255, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'selu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}
+Current model: 5, min val_loss: 0.22181203961372375 at epoch 224, terminated at epoch 274, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'linear', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}

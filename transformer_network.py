@@ -123,16 +123,29 @@ hyperparameters = {
     'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'activation': ['relu', 'sigmoid', 'tanh', 'selu', 'linear'], # Activation function
+    'activation': ['selu'], # Activation function
     'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
 }
 
+initial_learning_rate = 0.001
+decay_steps = 0.75 * len(y_train) / hyperparameters['batch_size'] * 10 # Decays every 10 epochs
+print(decay_steps)
+decay_rate = 0.96
+
+# Learning rate scheduler
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate,
+    decay_steps=decay_steps,
+    decay_rate=decay_rate,
+    staircase=True  # Set to False for smooth decay, True for discrete steps
+)
+
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
-    optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    optimizer = Adam(learning_rate= lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
     early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
