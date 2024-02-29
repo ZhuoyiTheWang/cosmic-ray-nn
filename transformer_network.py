@@ -124,8 +124,8 @@ hyperparameters = {
     'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'activation': ['selu'], # Activation function
-    'num_encoder_layers': [12, 14, 18], # Number of transformer encoder layers
+    'activation': ['elu'], # Activation function
+    'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
     'num_heads': [8] # Number of attention heads
@@ -151,16 +151,16 @@ def train_and_evaluate_model(hp):
     
     def print_lr(epoch, logs):
         lr = tf.keras.backend.get_value(model.optimizer.lr)
-        with open(f'home/zwang/cosmic-ray-nn/training/training_details/lr_logger{hyperparameter_iterator}', 'a') as file:
+        with open(f'home/zwang/cosmic-ray-nn/training/training_details/lr_logger_{hyperparameter_iterator}', 'a') as file:
             file.write(f"Epoch {epoch+1}: {lr:.6f}\n")
 
-    optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    optimizer = Adam(learning_rate=lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
     early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
     lr_logger = LambdaCallback(on_epoch_begin=lambda epoch, logs: print_lr(epoch, logs))
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping, lr_logger])  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
 
@@ -178,7 +178,7 @@ for hp_values in product(*hyperparameters.values()):
     with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'a') as file:
         file.write(f"\nCurrent model: {hyperparameter_iterator}, min val_loss: {validation_loss} at epoch {best_epoch}, terminated at epoch {terminal_epoch}, hyperparameters: {hp}")
     
-    with open(f'home/zwang/cosmic-ray-nn/training/training_details/training_history{hyperparameter_iterator}.txt', 'w') as file:
+    with open(f'home/zwang/cosmic-ray-nn/training/training_details/training_history_{hyperparameter_iterator}.txt', 'w') as file:
         for loss, val_loss in zip(fit.history['loss'], fit.history['val_loss']):
             file.write(f'{loss} {val_loss}\n')
     
