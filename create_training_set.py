@@ -13,7 +13,7 @@ shuffled_indices = np.arange(len(mass))
 np.random.shuffle(shuffled_indices)
 
 # Split the data into training and test sets
-test_size = int(0.05 * len(shuffled_indices)) # Calculate the number of samples for the test set (20%)
+test_size = int(0.20 * len(shuffled_indices)) # Calculate the number of samples for the test set (20%)
 indices_train = shuffled_indices[test_size:]
 indices_test = shuffled_indices[:test_size]
-np.savez('DataFast/zwang/train_indices_two_prods.npz', indices_train=indices_train, indices_test=indices_test)
+np.savez('DataFast/zwang/train_indices_bayesian.npz', indices_train=indices_train, indices_test=indices_test)
