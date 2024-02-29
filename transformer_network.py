@@ -5,7 +5,8 @@ from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, LambdaCallback
+from keras.optimizers.schedules import ExponentialDecay
 from itertools import product
 
 # Specify which GPU it trains on
@@ -130,13 +131,15 @@ hyperparameters = {
     'num_heads': [8] # Number of attention heads
 }
 
+# Initialize hyperparameter iterator
+hyperparameter_iterator = 1
+
 initial_learning_rate = 0.001
-decay_steps = 0.75 * len(y_train) / hyperparameters['batch_size'] * 10 # Decays every 10 epochs
-print(decay_steps)
+decay_steps = 0.75 * len(y_train) / hyperparameters['batch_size'][0] * 10 # Decays every 10 epochs
 decay_rate = 0.96
 
 # Learning rate scheduler
-lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+lr_schedule = ExponentialDecay(
     initial_learning_rate,
     decay_steps=decay_steps,
     decay_rate=decay_rate,
@@ -145,17 +148,25 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(hp):
-    optimizer = Adam(learning_rate= lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    
+    def print_lr(epoch, logs):
+        lr = tf.keras.backend.get_value(model.optimizer.lr)
+        if epoch == 0: 
+            with open(f'home/zwang/cosmic-ray-nn/training/training_details/lr_logger_{hyperparameter_iterator}', 'a') as file:
+                file.write(f"Epoch {epoch+1}: {lr:.6f}")
+        else:
+            with open(f'home/zwang/cosmic-ray-nn/training/training_details/lr_logger_{hyperparameter_iterator}', 'a') as file:
+                file.write(f"\nEpoch {epoch+1}: {lr:.6f}")
+
+    optimizer = Adam(learning_rate=lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
     early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
+    lr_logger = LambdaCallback(on_epoch_begin=lambda epoch, logs: print_lr(epoch, logs))
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
+    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping, lr_logger])  # Set verbose to 0 to suppress the detailed training log
     validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
     return model, validation_loss, fit
-
-# Initialize hyperparameter iterator
-hyperparameter_iterator = 1
 
 with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'w') as file:
     file.write(f"Training Details:")
