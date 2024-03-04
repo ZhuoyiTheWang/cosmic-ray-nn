@@ -8,7 +8,7 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, LambdaCallback
 from keras.optimizers.schedules import ExponentialDecay
 from itertools import product
-from import BayesianOptimization
+from bayes_opt import BayesianOptimization, UtilityFunction
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -18,6 +18,12 @@ preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
+
+directory = 'home/zwang/cosmic-ray-nn/training/bayesian_optimization/'
+os.makedirs(directory, exist_ok=True)
+
+# Path to the log file
+log_file_path = 'home/zwang/cosmic-ray-nn/training/bayesian_optimization/bayesian_optimization_log.txt'
 
 # Extract variables from file
 mass = f['mass']
@@ -92,6 +98,8 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_en
 
     return Model(inputs = sequence_input, outputs = x)
 
+iterator = 1
+
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_size, num_encoder_layers, num_decoder_layers, batch_size):
 
@@ -101,43 +109,53 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
     num_heads = int(num_heads)
     head_size = int(head_size)
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=25, mode='min', restore_best_weights=True)
 
     optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
     model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='selu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=500, validation_split=0.25, callbacks=[early_stopping])  # Set verbose to 0 to suppress the detailed training log
+    model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=300, validation_split=0.25, callbacks=[early_stopping])
     
-    _, val_loss = model.evaluate(x_test_sequential, y_test)
+    val_loss = model.evaluate(x_test_sequential, y_test)
+
+    hyperparameters = {k: v for k, v in locals().items() if k in pbounds}
+
+    with open(log_file_path, 'a') as file:
+        file.write(f"Hyperparameters: {hyperparameters}, Validation Loss: {val_loss}\n")
 
     return -val_loss
 
 pbounds = {
-    'ff_dim': (8, 128),
-    'dropout': (0.01, 0.5),
-    'learning_rate': (1e-4, 1e-2),
-    'num_heads': (2, 16),
+    'batch_size': (16, 64),
+    'dropout': (0.01, 0.3),
+    'ff_dim': (8, 64),
     'head_size': (32, 128),
-    'num_encoder_layers': (1, 24),
-    'num_decoder_layers': (0, 6),  
-    'batch_size': (16, 64)
+    'learning_rate': (1e-4, 1e-2),
+    'num_decoder_layers': (0, 0),
+    'num_encoder_layers': (8, 24),
+    'num_heads': (4, 16)
 }
 
 bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
-bayesian_optimizer.maximize(init_points=2, n_iter=10)
+bayesian_optimizer.maximize(init_points=1, n_iter=0)
 
 results = bayesian_optimizer.res
 
 sorted_results = sorted(results, key=lambda x: x['target'], reverse=True)
 
 # Number of top results you want to retrieve
-top_n = 5  # For example, to get the top 3 results
+top_n = 10 
 
 # Retrieve the top N performing hyperparameters
 top_performers = sorted_results[:top_n]
 
 # Print the top N performers
 for i, result in enumerate(top_performers, 1):
-    with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization.txt', 'a') as file:
+    with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
         file.write((f"Rank {i}, Hyperparameters: {result['params']}, Validation Loss: {-result['target']}\n"))
+
+utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
+next_point_to_probe = bayesian_optimizer.suggest(utility)
+with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
+        file.write((f"Next suggested point: {next_point_to_probe}\n"))
