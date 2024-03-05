@@ -2,10 +2,10 @@ import numpy as np
 import tensorflow as tf
 import os
 from matplotlib import pyplot as plt
-from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking, Flatten
+from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LambdaCallback
+from keras.callbacks import EarlyStopping, LambdaCallback, ModelCheckpoint, Callback
 from keras.optimizers.schedules import ExponentialDecay
 from itertools import product
 
@@ -71,6 +71,41 @@ sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 #     def call(self, inputs):
 #         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
+class DynamicPatienceCallback(Callback):
+    def __init__(self, early_stopping_callback, loss_threshold=0.8, high_patience=50, low_patience=20, window_size=5):
+        super().__init__()
+        self.early_stopping_callback = early_stopping_callback
+        self.loss_threshold = loss_threshold
+        self.high_patience = high_patience
+        self.low_patience = low_patience
+        self.window_size = window_size
+        self.recent_losses = []
+        self.best_median = np.Inf
+
+    def on_epoch_end(self, epoch, logs=None):
+        current_val_loss = logs.get('val_loss')
+        
+        self.recent_losses.append(current_val_loss)
+        if len(self.recent_losses) > self.window_size:
+            self.recent_losses.pop(0) 
+        
+        median_loss = np.median(self.recent_losses)
+
+        if median_loss < self.loss_threshold:
+            self.early_stopping_callback.patience = self.high_patience
+        else:
+            self.early_stopping_callback.patience = self.low_patience
+
+class InterruptHandler(Callback):
+    def __init__(self):
+        super().__init__()
+        self.custom_history={}
+
+    def on_train_end(self, logs=None):
+        if logs is not None:
+            self.custom_history.setdefault('loss', []).append(logs.get('loss'))
+            self.custom_history.setdefault('val_loss', []).append(logs.get('val_loss'))
+
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout, activation):
     # Normalization and Attention
     x = LayerNormalization(epsilon=1e-6)(inputs)
@@ -125,10 +160,10 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [16], # Number of transformer encoder layers
+    'num_encoder_layers': [1], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
-    'head_size': [64], # Size of each attention head
-    'num_heads': [8] # Number of attention heads
+    'head_size': [1], # Size of each attention head
+    'num_heads': [1] # Number of attention heads
 }
 
 # Initialize hyperparameter iterator
@@ -155,14 +190,28 @@ def train_and_evaluate_model(hp):
             file.write(f"Epoch {epoch+1}: {lr:.6f}\n")
 
     optimizer = Adam(learning_rate=lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-    early_stopping = EarlyStopping(monitor='val_loss', patience=50, mode='min', restore_best_weights=True)
+
+    early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
+    dynamic_patience = DynamicPatienceCallback(early_stopping)
     lr_logger = LambdaCallback(on_epoch_begin=lambda epoch, logs: print_lr(epoch, logs))
+    model_checkpoint = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5', monitor='val_loss', save_best_only=True, mode='min')
+    interrupt_handler = InterruptHandler()
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping, lr_logger])  # Set verbose to 0 to suppress the detailed training log
-    validation_loss = np.min(fit.history['val_loss'])  # Get the best validation loss during the training
-    return model, validation_loss, fit
+    
+    history = None
+
+    try:
+        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
+        history = fit.history
+        validation_loss = np.min(history['val_loss'])  # Get the best validation loss during the training
+    except KeyboardInterrupt:
+        history = interrupt_handler.custom_history
+        validation_loss = np.min(history['val_loss'])
+    
+    model.load_weights('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5')
+    return model, validation_loss, history
 
 with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'w') as file:
     file.write(f"Training Details:")
@@ -170,26 +219,26 @@ with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.tx
 for hp_values in product(*hyperparameters.values()):
     hp = dict(zip(hyperparameters.keys(), hp_values))
     print(f"Training with hyperparameters: {hp}")
-    model, validation_loss, fit = train_and_evaluate_model(hp)
+    model, validation_loss, history = train_and_evaluate_model(hp)
     
-    best_epoch = np.argmin(fit.history['val_loss']) + 1
-    terminal_epoch = len(fit.history['val_loss'])
-
+    best_epoch = np.argmin(history['val_loss']) + 1
+    terminal_epoch = len(history['val_loss'])
+        
     with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'a') as file:
         file.write(f"\nCurrent model: {hyperparameter_iterator}, min val_loss: {validation_loss} at epoch {best_epoch}, terminated at epoch {terminal_epoch}, hyperparameters: {hp}")
     
     with open(f'home/zwang/cosmic-ray-nn/training/training_details/training_history_{hyperparameter_iterator}.txt', 'w') as file:
-        for loss, val_loss in zip(fit.history['loss'], fit.history['val_loss']):
+        for loss, val_loss in zip(history['loss'], history['val_loss']):
             file.write(f'{loss} {val_loss}\n')
     
     model.save(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}.h5')
     
     # Plot training curves
     fig, ax = plt.subplots(1, figsize=(8,5))
-    n = np.arange(len(fit.history['loss']))
+    n = np.arange(len(history['loss']))
 
-    ax.plot(n, fit.history['loss'], ls='--', c='k', label='loss')
-    ax.plot(n, fit.history['val_loss'], label='val_loss', color='red')
+    ax.plot(n, history['loss'], ls='--', c='k', label='loss')
+    ax.plot(n, history['val_loss'], label='val_loss', color='red')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
     ax.legend()
@@ -205,5 +254,5 @@ for hp_values in product(*hyperparameters.values()):
     with open(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}_predictions.txt', 'w') as file:
             for actual, predicted in zip(y_test, mass_pred):
                 file.write(f'Actual: {actual}, Predicted: {predicted}\n')
-    
+        
     hyperparameter_iterator += 1

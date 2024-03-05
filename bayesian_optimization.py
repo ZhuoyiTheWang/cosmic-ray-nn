@@ -5,9 +5,7 @@ from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Concatenate, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LambdaCallback
-from keras.optimizers.schedules import ExponentialDecay
-from itertools import product
+from keras.callbacks import EarlyStopping, Callback
 from bayes_opt import BayesianOptimization, UtilityFunction
 
 # Specify which GPU it trains on
@@ -49,6 +47,31 @@ y_test = mass[indices_test]
 
 sequence_len = sequential_features.shape[1]  # Number of events in the sequence
 sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
+
+class DynamicPatienceCallback(Callback):
+    def __init__(self, early_stopping_callback, loss_threshold=1.3, high_patience=2, low_patience=1, window_size=5):
+        super().__init__()
+        self.early_stopping_callback = early_stopping_callback
+        self.loss_threshold = loss_threshold
+        self.high_patience = high_patience
+        self.low_patience = low_patience
+        self.window_size = window_size
+        self.recent_losses = []
+        self.best_median = np.Inf
+
+    def on_epoch_end(self, epoch, logs=None):
+        current_val_loss = logs.get('val_loss')
+        
+        self.recent_losses.append(current_val_loss)
+        if len(self.recent_losses) > self.window_size:
+            self.recent_losses.pop(0) 
+        
+        median_loss = np.median(self.recent_losses)
+
+        if median_loss < self.loss_threshold:
+            self.early_stopping_callback.patience = self.high_patience
+        else:
+            self.early_stopping_callback.patience = self.low_patience
 
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout, activation):
     # Normalization and Attention
@@ -109,20 +132,21 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
     num_heads = int(num_heads)
     head_size = int(head_size)
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=25, mode='min', restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
+    dynamic_patience = DynamicPatienceCallback(early_stopping)
 
     optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
     model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='selu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=300, validation_split=0.25, callbacks=[early_stopping])
+    model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=300, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
     
     val_loss = model.evaluate(x_test_sequential, y_test)
 
     hyperparameters = {k: v for k, v in locals().items() if k in pbounds}
 
     with open(log_file_path, 'a') as file:
-        file.write(f"Hyperparameters: {hyperparameters}, Validation Loss: {val_loss}\n")
+        file.write(f"Min val_loss: {val_loss}, Hyperparameters: {hyperparameters}\n")
 
     return -val_loss
 
@@ -133,29 +157,33 @@ pbounds = {
     'head_size': (32, 128),
     'learning_rate': (1e-4, 1e-2),
     'num_decoder_layers': (0, 0),
-    'num_encoder_layers': (8, 24),
+    'num_encoder_layers': (1, 2),
     'num_heads': (4, 16)
 }
 
-bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
-bayesian_optimizer.maximize(init_points=1, n_iter=0)
 
-results = bayesian_optimizer.res
+try:
+    bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
+    bayesian_optimizer.maximize(init_points=3, n_iter=25)
+except KeyboardInterrupt:
+    print("\nTraining terminated by user.")
+finally:
+    results = bayesian_optimizer.res
 
-sorted_results = sorted(results, key=lambda x: x['target'], reverse=True)
+    sorted_results = sorted(results, key=lambda x: x['target'], reverse=True)
 
-# Number of top results you want to retrieve
-top_n = 10 
+    # Number of top results you want to retrieve
+    top_n = 10 
 
-# Retrieve the top N performing hyperparameters
-top_performers = sorted_results[:top_n]
+    # Retrieve the top N performing hyperparameters
+    top_performers = sorted_results[:top_n]
 
-# Print the top N performers
-for i, result in enumerate(top_performers, 1):
+    # Print the top N performers
+    for i, result in enumerate(top_performers, 1):
+        with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
+            file.write((f"Rank {i}, Min val_loss: {-result['target']}, Hyperparameters: {result['params']}\n"))
+
+    utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
+    next_point_to_probe = bayesian_optimizer.suggest(utility)
     with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
-        file.write((f"Rank {i}, Hyperparameters: {result['params']}, Validation Loss: {-result['target']}\n"))
-
-utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
-next_point_to_probe = bayesian_optimizer.suggest(utility)
-with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
-        file.write((f"Next suggested point: {next_point_to_probe}\n"))
+            file.write((f"Next suggested point: {next_point_to_probe}\n"))
