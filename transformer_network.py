@@ -13,7 +13,7 @@ from itertools import product
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
+preprocessed_data = 'DataFast/zwang/data_prod_0_to_20.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -33,7 +33,7 @@ zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 sequential_features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_two_prods.npz'
+indicesFile = 'DataFast/zwang/train_indices_prod_0_to_20.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -72,7 +72,7 @@ sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 #         return inputs + self.pos_encoding[:, :tf.shape(inputs)[1], :]
 
 class DynamicPatienceCallback(Callback):
-    def __init__(self, early_stopping_callback, loss_threshold=0.8, high_patience=50, low_patience=20, window_size=5):
+    def __init__(self, early_stopping_callback, loss_threshold=0.8, high_patience=100, low_patience=20, window_size=5):
         super().__init__()
         self.early_stopping_callback = early_stopping_callback
         self.loss_threshold = loss_threshold
@@ -159,7 +159,7 @@ hyperparameters = {
     'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'activation': ['elu'], # Activation function
+    'activation': ['selu'], # Activation function
     'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
@@ -189,7 +189,7 @@ def train_and_evaluate_model(hp):
         with open(f'home/zwang/cosmic-ray-nn/training/training_details/lr_logger_{hyperparameter_iterator}', 'a') as file:
             file.write(f"Epoch {epoch+1}: {lr:.6f}\n")
 
-    optimizer = Adam(learning_rate=lr_schedule, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    optimizer = Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-8)
 
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
     dynamic_patience = DynamicPatienceCallback(early_stopping)
@@ -203,7 +203,7 @@ def train_and_evaluate_model(hp):
     history = None
 
     try:
-        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
+        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=1500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
         history = fit.history
         validation_loss = np.min(history['val_loss'])  # Get the best validation loss during the training
     except KeyboardInterrupt:

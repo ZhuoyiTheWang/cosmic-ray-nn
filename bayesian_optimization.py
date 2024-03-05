@@ -49,7 +49,7 @@ sequence_len = sequential_features.shape[1]  # Number of events in the sequence
 sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 
 class DynamicPatienceCallback(Callback):
-    def __init__(self, early_stopping_callback, loss_threshold=1.3, high_patience=2, low_patience=1, window_size=5):
+    def __init__(self, early_stopping_callback, loss_threshold=1.0, high_patience=50, low_patience=20, window_size=5):
         super().__init__()
         self.early_stopping_callback = early_stopping_callback
         self.loss_threshold = loss_threshold
@@ -135,7 +135,7 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
     dynamic_patience = DynamicPatienceCallback(early_stopping)
 
-    optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+    optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-8)
 
     model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='selu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
@@ -146,9 +146,22 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
     hyperparameters = {k: v for k, v in locals().items() if k in pbounds}
 
     with open(log_file_path, 'a') as file:
-        file.write(f"Min val_loss: {val_loss}, Hyperparameters: {hyperparameters}\n")
+        file.write(f"Model {iterator}: Min val_loss: {val_loss}, Hyperparameters: {hyperparameters}\n")
+    
+    iterator = iterator + 1
 
     return -val_loss
+
+known_good_params = {
+    'batch_size': 32,
+    'dropout': 0.1,
+    'ff_dim': 16,
+    'head_size': 64,
+    'learning_rate': 0.001,
+    'num_decoder_layers': 0,
+    'num_encoder_layers': 16,
+    'num_heads': 8
+}
 
 pbounds = {
     'batch_size': (16, 64),
@@ -157,14 +170,15 @@ pbounds = {
     'head_size': (32, 128),
     'learning_rate': (1e-4, 1e-2),
     'num_decoder_layers': (0, 0),
-    'num_encoder_layers': (1, 2),
+    'num_encoder_layers': (8, 32),
     'num_heads': (4, 16)
 }
 
+bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
+bayesian_optimizer.probe(params=known_good_params, lazy=True)
 
 try:
-    bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
-    bayesian_optimizer.maximize(init_points=3, n_iter=25)
+    bayesian_optimizer.maximize(init_points=3, n_iter=30)
 except KeyboardInterrupt:
     print("\nTraining terminated by user.")
 finally:
@@ -172,7 +186,7 @@ finally:
 
     sorted_results = sorted(results, key=lambda x: x['target'], reverse=True)
 
-    # Number of top results you want to retrieve
+    # Number of top results to retrieve
     top_n = 10 
 
     # Retrieve the top N performing hyperparameters
