@@ -99,12 +99,12 @@ class DynamicPatienceCallback(Callback):
 class InterruptHandler(Callback):
     def __init__(self):
         super().__init__()
-        self.custom_history={}
+        self.history={}
 
-    def on_train_end(self, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         if logs is not None:
-            self.custom_history.setdefault('loss', []).append(logs.get('loss'))
-            self.custom_history.setdefault('val_loss', []).append(logs.get('val_loss'))
+            for key, value in logs.items():
+                self.history.setdefault(key, []).append(value)
 
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout, activation):
     # Normalization and Attention
@@ -160,10 +160,10 @@ hyperparameters = {
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
     'activation': ['elu'], # Activation function
-    'num_encoder_layers': [1], # Number of transformer encoder layers
+    'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
-    'head_size': [1], # Size of each attention head
-    'num_heads': [1] # Number of attention heads
+    'head_size': [64], # Size of each attention head
+    'num_heads': [8] # Number of attention heads
 }
 
 # Initialize hyperparameter iterator
@@ -203,14 +203,13 @@ def train_and_evaluate_model(hp):
     history = None
 
     try:
-        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
+        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=5, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
         history = fit.history
         validation_loss = np.min(history['val_loss'])  # Get the best validation loss during the training
     except KeyboardInterrupt:
-        history = interrupt_handler.custom_history
+        history = interrupt_handler.history
         validation_loss = np.min(history['val_loss'])
-    
-    model.load_weights('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5')
+
     return model, validation_loss, history
 
 with open('home/zwang/cosmic-ray-nn/training/training_details/training_params.txt', 'w') as file:
@@ -230,8 +229,6 @@ for hp_values in product(*hyperparameters.values()):
     with open(f'home/zwang/cosmic-ray-nn/training/training_details/training_history_{hyperparameter_iterator}.txt', 'w') as file:
         for loss, val_loss in zip(history['loss'], history['val_loss']):
             file.write(f'{loss} {val_loss}\n')
-    
-    model.save(f'home/zwang/cosmic-ray-nn/training/training_details/model_{hyperparameter_iterator}.h5')
     
     # Plot training curves
     fig, ax = plt.subplots(1, figsize=(8,5))
