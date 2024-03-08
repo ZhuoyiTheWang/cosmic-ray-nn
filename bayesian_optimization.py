@@ -137,7 +137,7 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
 
     optimizer = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-8)
 
-    model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='selu')
+    model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='elu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
     model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=300, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
     

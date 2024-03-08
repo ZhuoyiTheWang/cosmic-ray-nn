@@ -1,0 +1,2 @@
+Training Details:
+Current model: 1, min val_loss: 0.9823471307754517 at epoch 1, terminated at epoch 10, hyperparameters: {'ff_dim': 16, 'dropout': 0.1, 'batch_size': 32, 'activation': 'selu', 'num_encoder_layers': 16, 'num_decoder_layers': 0, 'head_size': 64, 'num_heads': 8}

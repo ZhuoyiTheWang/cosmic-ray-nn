@@ -159,7 +159,7 @@ hyperparameters = {
     'ff_dim': [16], # Hidden layer size in feed forward network inside transformer
     'dropout': [0.1], # Dropout rate
     'batch_size': [32], # Batch size
-    'activation': ['selu'], # Activation function
+    'activation': ['elu'], # Activation function
     'num_encoder_layers': [16], # Number of transformer encoder layers
     'num_decoder_layers' : [0], # Number of transformer decoder layers
     'head_size': [64], # Size of each attention head
