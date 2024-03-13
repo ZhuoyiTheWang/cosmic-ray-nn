@@ -12,7 +12,7 @@ from itertools import product
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-# Get the processed training data
+# Get the processed data
 preprocessed_data = 'DataFast/zwang/data_prod_0_to_20.npz'
 
 # Load data into a multi-array object
@@ -194,7 +194,8 @@ def train_and_evaluate_model(hp):
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
     dynamic_patience = DynamicPatienceCallback(early_stopping)
     lr_logger = LambdaCallback(on_epoch_begin=lambda epoch, logs: print_lr(epoch, logs))
-    model_checkpoint = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5', monitor='val_loss', save_best_only=True, mode='min')
+    best_model = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5', monitor='val_loss', save_best_only=True, mode='min')
+    current_model = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/current_model.h5')
     interrupt_handler = InterruptHandler()
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
@@ -203,7 +204,7 @@ def train_and_evaluate_model(hp):
     history = None
 
     try:
-        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=1500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, model_checkpoint, interrupt_handler])
+        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=1500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, best_model, current_model, interrupt_handler])
         history = fit.history
         validation_loss = np.min(history['val_loss'])  # Get the best validation loss during the training
     except KeyboardInterrupt:
