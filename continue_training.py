@@ -9,7 +9,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint, Callback
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed data
-preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
+preprocessed_data = 'DataFast/zwang/data_prod_0_to_20.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -29,7 +29,7 @@ zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 sequential_features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_two_prods.npz'
+indicesFile = 'DataFast/zwang/train_indices_prod_0_to_20.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
