@@ -1,6 +1,6 @@
 import numpy as np
 
-preprocessed_data = '/DataFast/zwang/data_prod_0_to_20.npz'
+preprocessed_data = '/DataFast/zwang/data_prod_0_to_4.npz'
 f = np.load(preprocessed_data, allow_pickle=True)
 
 # Extract variables from file
@@ -13,7 +13,7 @@ shuffled_indices = np.arange(len(mass))
 np.random.shuffle(shuffled_indices)
 
 # Split the data into training and test sets
-test_size = int(0.05 * len(shuffled_indices)) # Calculate the number of samples for the test set (5%)
+test_size = int(0.20 * len(shuffled_indices)) # Calculate the number of samples for the test set (5%)
 indices_train = shuffled_indices[test_size:]
 indices_test = shuffled_indices[:test_size]
-np.savez('/DataFast/zwang/train_indices_prod_0_to_20.npz', indices_train=indices_train, indices_test=indices_test)
+np.savez('/DataFast/zwang/train_indices_prod_0_to_4.npz', indices_train=indices_train, indices_test=indices_test)

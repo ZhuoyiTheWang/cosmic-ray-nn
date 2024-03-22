@@ -7,7 +7,7 @@ directory = 'home/zwang/cosmic-ray-nn/testing/testing_details/'
 os.makedirs(directory, exist_ok=True)
 
 # Specify which GPU it runs on
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 # Get the processed data and load data into a multi-array object
 preprocessed_data = 'DataFast/zwang/data_prod_0_to_20.npz'
@@ -32,7 +32,7 @@ indices_test = indices['indices_test']
 x_test_sequential = sequential_features[indices_test]
 y_test = mass[indices_test]
 
-model = load_model('home/zwang/cosmic-ray-nn/training/(17) Successful Long Train [elu]/best_model.h5')
+model = load_model('home/zwang/cosmic-ray-nn/training/training_details/[l: 0.1395, vl: 0.1262].h5')
 
 mass_pred = model.predict([x_test_sequential])
 mass_pred = mass_pred.reshape(len(y_test))

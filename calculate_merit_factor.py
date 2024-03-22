@@ -2,13 +2,13 @@ import numpy as np
 import os
 from matplotlib import pyplot as plt
 
-results_folder = '/home/zwang/cosmic-ray-nn/testing/(1) General Model [l: 0.1551, vl: 0.1337]'
+results_folder = '/home/zwang/cosmic-ray-nn/testing/testing_details'
 results = np.load(f'{results_folder}/model_predictions.npz')
 
 truth = results['actual']
 prediction = results['predicted']
 
-filter_negatives = False
+filter_negatives = True
 
 proton_predictions = prediction[truth == 0.0]
 iron_predictions = prediction[truth == 4.02535169073515]
