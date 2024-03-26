@@ -8,7 +8,7 @@ results = np.load(f'{results_folder}/model_predictions.npz')
 truth = results['actual']
 prediction = results['predicted']
 
-filter_negatives = True
+filter_negatives = False
 
 proton_predictions = prediction[truth == 0.0]
 iron_predictions = prediction[truth == 4.02535169073515]

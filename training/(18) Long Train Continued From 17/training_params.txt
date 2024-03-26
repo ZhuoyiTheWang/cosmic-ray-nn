@@ -1,0 +1,2 @@
+Continue training model at home/zwang/cosmic-ray-nn/training/(17) Successful Long Train [elu]/best_model.h5
+Current model: min val_loss: 0.12618528306484222 at epoch 141, terminated at epoch 218

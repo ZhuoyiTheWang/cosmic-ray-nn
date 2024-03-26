@@ -1,0 +1,5 @@
+Merit Factor: 8.36009575871858
+Proton Expected Value: 0.48018309473991394 
+Iron Expected Value: 3.8823623657226562 
+Proton Standard Deviation: 0.38476940989494324 
+Iron Standard Deviation: 0.13253124058246613

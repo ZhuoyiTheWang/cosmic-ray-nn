@@ -1,1 +1,0 @@
-Continue training model at home/zwang/cosmic-ray-nn/training/(17) Successful Long Train [elu]/best_model.h5
