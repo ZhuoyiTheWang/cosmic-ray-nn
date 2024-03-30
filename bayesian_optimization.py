@@ -12,7 +12,7 @@ from bayes_opt import BayesianOptimization, UtilityFunction
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed training data
-preprocessed_data = 'DataFast/zwang/data_two_prods.npz'
+preprocessed_data = 'DataFast/zwang/data_prod_0_to_4.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -34,7 +34,7 @@ zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 sequential_features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_bayesian.npz'
+indicesFile = 'DataFast/zwang/train_indices_prod_0_to_4.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -49,7 +49,7 @@ sequence_len = sequential_features.shape[1]  # Number of events in the sequence
 sequential_feature_size = 3  # Number of features per time step (X, dEdX, zen)
 
 class DynamicPatienceCallback(Callback):
-    def __init__(self, early_stopping_callback, loss_threshold=1.0, high_patience=50, low_patience=20, window_size=5):
+    def __init__(self, early_stopping_callback, loss_threshold=0.6, high_patience=50, low_patience=20, window_size=5):
         super().__init__()
         self.early_stopping_callback = early_stopping_callback
         self.loss_threshold = loss_threshold
@@ -126,11 +126,14 @@ iterator = 1
 # Function to train a model and return the validation loss
 def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_size, num_encoder_layers, num_decoder_layers, batch_size):
 
+    global iterator
+
     ff_dim = int(ff_dim)
     num_encoder_layers = int(num_encoder_layers)
     num_decoder_layers = int(num_decoder_layers)
     num_heads = int(num_heads)
     head_size = int(head_size)
+    batch_size = int(batch_size)
 
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
     dynamic_patience = DynamicPatienceCallback(early_stopping)
@@ -139,18 +142,24 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
 
     model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='elu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    model.fit(x_train_sequential, y_train, batch_size=int(batch_size), epochs=300, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
+    fit = model.fit(x_train_sequential, y_train, batch_size=batch_size, epochs=300, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
     
-    val_loss = model.evaluate(x_test_sequential, y_test)
+    history = fit.history
+
+    with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/training_history_{iterator}.txt', 'w') as file:
+        for loss, val_loss in zip(history['loss'], history['val_loss']):
+            file.write(f'{loss} {val_loss}\n')
+
+    test_loss = model.evaluate(x_test_sequential, y_test)
 
     hyperparameters = {k: v for k, v in locals().items() if k in pbounds}
 
     with open(log_file_path, 'a') as file:
-        file.write(f"Model {iterator}: Min val_loss: {val_loss}, Hyperparameters: {hyperparameters}\n")
+        file.write(f"Model {iterator}: test_loss: {test_loss}, Hyperparameters: {hyperparameters}\n")
     
     iterator = iterator + 1
 
-    return -val_loss
+    return -test_loss
 
 known_good_params = {
     'batch_size': 32,
@@ -186,16 +195,10 @@ finally:
 
     sorted_results = sorted(results, key=lambda x: x['target'], reverse=True)
 
-    # Number of top results to retrieve
-    top_n = 10 
-
-    # Retrieve the top N performing hyperparameters
-    top_performers = sorted_results[:top_n]
-
-    # Print the top N performers
-    for i, result in enumerate(top_performers, 1):
+    # Print the results of all models sorted by best first
+    for i, result in enumerate(sorted_results, 1):
         with open(f'home/zwang/cosmic-ray-nn/training/bayesian_optimization/top_performers.txt', 'a') as file:
-            file.write((f"Rank {i}, Min val_loss: {-result['target']}, Hyperparameters: {result['params']}\n"))
+            file.write((f"Rank {i}, test_loss: {-result['target']}, Hyperparameters: {result['params']}\n"))
 
     utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
     next_point_to_probe = bayesian_optimizer.suggest(utility)

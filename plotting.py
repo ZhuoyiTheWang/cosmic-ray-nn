@@ -26,7 +26,7 @@ def lnA_correlation(mass_true, mass_pred, plot_dir, noise):
     print(pearsonr(mass_pred, mass_true, alternative='two-sided')[0])
     binning = np.arange(-0.5, 5.05, 0.05)
     _, mean_mf, std_mf, _ = tools.get_mean_and_std(mass_true, mass_pred, 48)
-    merit_factor = np.abs(mean_mf[0] - mean_mf[-6])/np.sqrt(std_mf[0]**2 + std_mf[-6]**2)
+    merit_factor = np.abs(mean_mf[0] - mean_mf[-1])/np.sqrt(std_mf[0]**2 + std_mf[-1]**2)
     bin_centers, mean, mean_err, bin_width = tools.get_mean_and_err(mass_true, diff, 48)
     bin_centers, std, std_err, bin_width = tools.get_std_and_err(mass_true, diff, 48)
 
