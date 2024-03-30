@@ -642,37 +642,43 @@ def get_rms(values):
 
 def get_mean_and_err(x, y, nbins, useSE=False):
 
-    mean_results = binned_statistic(x, y, statistic='mean', bins=nbins)
-    std_results = binned_statistic(x, y, statistic=sem, bins=nbins)
+    unique_values = np.unique(x)
+    bin_edges = np.append(unique_values, unique_values[-1] + 0.00000001)
+
+    mean_results = binned_statistic(x, y, statistic='mean', bins=bin_edges)
+    std_results = binned_statistic(x, y, statistic=sem, bins=bin_edges)
+    
     mean = mean_results.statistic
     std = std_results.statistic
     if useSE:
         count_results = binned_statistic(x, y, statistic='count', bins=nbins)
         std /= np.sqrt(count_results.statistic)
-    bin_centers = (mean_results.bin_edges[1:] + mean_results.bin_edges[:-1]) / 2.
-    bin_width = bin_centers - mean_results.bin_edges[1:]
+    
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
 
-    return bin_centers, mean, std, np.abs(bin_width)
+    return bin_centers, mean, std, 0
 
 
 def get_std_and_err(x, y, nbins, useSE=False):
 
-    mean_results = binned_statistic(x, y, statistic='std', bins=nbins)
-    std_results = binned_statistic(x, y, statistic=get_rmse, bins=nbins)
+    unique_values = np.unique(x)
+    bin_edges = np.append(unique_values, unique_values[-1] + 0.00000001)
+
+    mean_results = binned_statistic(x, y, statistic='std', bins=bin_edges)
+    std_results = binned_statistic(x, y, statistic=get_rmse, bins=bin_edges)
     mean = mean_results.statistic
     std = std_results.statistic
     if useSE:
         count_results = binned_statistic(x, y, statistic='count', bins=nbins)
         std /= np.sqrt(count_results.statistic)
-    bin_centers = (mean_results.bin_edges[1:] + mean_results.bin_edges[:-1]) / 2.
-    bin_width = bin_centers - mean_results.bin_edges[1:]
+    
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
 
-    return bin_centers, mean, std, np.abs(bin_width)
+    return bin_centers, mean, std, 0
 
 def get_mean_and_std(x, y, nbins, useSE=False):
 
     mean_results = binned_statistic(x, y, statistic='mean', bins=nbins)
-    print(mean_results.statistic)
     std_results = binned_statistic(x, y, statistic='std', bins=nbins)
     mean = mean_results.statistic
     std = std_results.statistic
