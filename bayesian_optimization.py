@@ -7,6 +7,9 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, Callback
 from bayes_opt import BayesianOptimization, UtilityFunction
+from bayes_opt.logger import JSONLogger
+from bayes_opt.event import Events
+from bayes_opt.util import load_logs
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -142,7 +145,7 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
 
     model = build_model(sequence_len, sequential_feature_size, head_size, num_heads, ff_dim, num_encoder_layers, num_decoder_layers, dropout, activation='elu')
     model.compile(optimizer=optimizer, loss='mean_squared_error')
-    fit = model.fit(x_train_sequential, y_train, batch_size=batch_size, epochs=300, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
+    fit = model.fit(x_train_sequential, y_train, batch_size=batch_size, epochs=1, validation_split=0.25, callbacks=[early_stopping, dynamic_patience])
     
     history = fit.history
 
@@ -161,30 +164,36 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
 
     return -test_loss
 
-known_good_params = {
-    'batch_size': 32,
-    'dropout': 0.1,
-    'ff_dim': 16,
-    'head_size': 64,
-    'learning_rate': 0.001,
-    'num_decoder_layers': 0,
-    'num_encoder_layers': 16,
-    'num_heads': 8
-}
+# known_good_params = {
+#     'batch_size': 32,
+#     'dropout': 0.1,
+#     'ff_dim': 16,
+#     'head_size': 64,
+#     'learning_rate': 0.001,
+#     'num_decoder_layers': 0,
+#     'num_encoder_layers': 16,
+#     'num_heads': 8
+# }
+
+# known_good_score = -0.15584532916545868
 
 pbounds = {
-    'batch_size': (16, 64),
-    'dropout': (0.01, 0.3),
-    'ff_dim': (8, 64),
+    'batch_size': (32,32),
+    'dropout': (0.1, 0.1),
+    'ff_dim': (8, 128),
     'head_size': (32, 128),
-    'learning_rate': (1e-4, 1e-2),
+    'learning_rate': (1e-3, 1e-3),
     'num_decoder_layers': (0, 0),
-    'num_encoder_layers': (8, 32),
-    'num_heads': (4, 16)
+    'num_encoder_layers': (8, 64),
+    'num_heads': (4, 32)
 }
 
-bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=42)
-bayesian_optimizer.probe(params=known_good_params, lazy=True)
+bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=37)
+load_logs(bayesian_optimizer, logs=[f"{directory}./logs.json"])
+# bayesian_optimizer.probe(params=known_good_params, y=known_good_score, lazy=False)
+
+logger = JSONLogger(path=f"{directory}./logs", reset=False)
+bayesian_optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
 try:
     bayesian_optimizer.maximize(init_points=3, n_iter=30)

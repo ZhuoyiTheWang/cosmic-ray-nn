@@ -1,0 +1,1 @@
+{"target": -0.15584532916545868, "params": {"batch_size": 32, "dropout": 0.1, "ff_dim": 16, "head_size": 64, "learning_rate": 0.001, "num_decoder_layers": 0, "num_encoder_layers": 16, "num_heads": 8}, "datetime": {"datetime": "2024-03-31 22:07:52", "elapsed": 0.0, "delta": 0.0}}
