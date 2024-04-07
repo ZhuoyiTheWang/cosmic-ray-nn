@@ -42,7 +42,7 @@ def generate_and_save_graph(elements, file_path_prefix):
     plt.xlabel('Predicted Value')
     plt.ylabel('Percentage of Counts')
     plt.title('Distribution of Predicted Values Per Element')
-    plt.legend()
+    # plt.legend()
 
     # Creating a unique filename based on the selected elements
     elements_str = '_'.join(sorted(elements, key=lambda x: element_info[x]['value']))

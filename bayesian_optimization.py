@@ -6,6 +6,8 @@ from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, Multi
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, Callback
+from keras.backend import clear_session
+import gc
 from bayes_opt import BayesianOptimization, UtilityFunction
 from bayes_opt.logger import JSONLogger
 from bayes_opt.event import Events
@@ -13,6 +15,15 @@ from bayes_opt.util import load_logs
 
 # Specify which GPU it trains on
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        # Sets memory growth for the GPU to true
+        tf.config.experimental.set_memory_growth(gpus[0], True)
+    except RuntimeError as e:
+        # Memory growth must be set at program startup
+        print(e)
 
 # Get the processed training data
 preprocessed_data = 'DataFast/zwang/data_prod_0_to_4.npz'
@@ -162,6 +173,10 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
     
     iterator = iterator + 1
 
+    clear_session()
+    del model
+    gc.collect()
+
     return -test_loss
 
 # known_good_params = {
@@ -180,12 +195,12 @@ def train_and_evaluate_model(ff_dim, dropout, learning_rate, num_heads, head_siz
 pbounds = {
     'batch_size': (32,32),
     'dropout': (0.1, 0.1),
-    'ff_dim': (8, 128),
-    'head_size': (32, 128),
+    'ff_dim': (8, 64),
+    'head_size': (128, 128),
     'learning_rate': (1e-3, 1e-3),
     'num_decoder_layers': (0, 0),
-    'num_encoder_layers': (8, 64),
-    'num_heads': (4, 32)
+    'num_encoder_layers': (8, 32),
+    'num_heads': (24, 24)
 }
 
 bayesian_optimizer = BayesianOptimization(f=train_and_evaluate_model, pbounds=pbounds, random_state=37)
