@@ -1,0 +1,505 @@
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_1 (InputLayer)        [(None, 577, 3)]             0         []                            
+                                                                                                  
+ layer_normalization (Layer  (None, 577, 3)               6         ['input_1[0][0]']             
+ Normalization)                                                                                   
+                                                                                                  
+ multi_head_attention (Mult  (None, 577, 3)               7683      ['layer_normalization[0][0]', 
+ iHeadAttention)                                                     'layer_normalization[0][0]', 
+                                                                     'layer_normalization[0][0]'] 
+                                                                                                  
+ dropout (Dropout)           (None, 577, 3)               0         ['multi_head_attention[0][0]']
+                                                                                                  
+ tf.__operators__.add (TFOp  (None, 577, 3)               0         ['dropout[0][0]',             
+ Lambda)                                                             'input_1[0][0]']             
+                                                                                                  
+ layer_normalization_1 (Lay  (None, 577, 3)               6         ['tf.__operators__.add[0][0]']
+ erNormalization)                                                                                 
+                                                                                                  
+ dense (Dense)               (None, 577, 16)              64        ['layer_normalization_1[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_1 (Dropout)         (None, 577, 16)              0         ['dense[0][0]']               
+                                                                                                  
+ dense_1 (Dense)             (None, 577, 3)               51        ['dropout_1[0][0]']           
+                                                                                                  
+ tf.__operators__.add_1 (TF  (None, 577, 3)               0         ['dense_1[0][0]',             
+ OpLambda)                                                           'tf.__operators__.add[0][0]']
+                                                                                                  
+ layer_normalization_2 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_1[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ multi_head_attention_1 (Mu  (None, 577, 3)               7683      ['layer_normalization_2[0][0]'
+ ltiHeadAttention)                                                  , 'layer_normalization_2[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_2[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_2 (Dropout)         (None, 577, 3)               0         ['multi_head_attention_1[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_2 (TF  (None, 577, 3)               0         ['dropout_2[0][0]',           
+ OpLambda)                                                           'tf.__operators__.add_1[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_3 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_2[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ dense_2 (Dense)             (None, 577, 16)              64        ['layer_normalization_3[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_3 (Dropout)         (None, 577, 16)              0         ['dense_2[0][0]']             
+                                                                                                  
+ dense_3 (Dense)             (None, 577, 3)               51        ['dropout_3[0][0]']           
+                                                                                                  
+ tf.__operators__.add_3 (TF  (None, 577, 3)               0         ['dense_3[0][0]',             
+ OpLambda)                                                           'tf.__operators__.add_2[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_4 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_3[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ multi_head_attention_2 (Mu  (None, 577, 3)               7683      ['layer_normalization_4[0][0]'
+ ltiHeadAttention)                                                  , 'layer_normalization_4[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_4[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_4 (Dropout)         (None, 577, 3)               0         ['multi_head_attention_2[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_4 (TF  (None, 577, 3)               0         ['dropout_4[0][0]',           
+ OpLambda)                                                           'tf.__operators__.add_3[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_5 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_4[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ dense_4 (Dense)             (None, 577, 16)              64        ['layer_normalization_5[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_5 (Dropout)         (None, 577, 16)              0         ['dense_4[0][0]']             
+                                                                                                  
+ dense_5 (Dense)             (None, 577, 3)               51        ['dropout_5[0][0]']           
+                                                                                                  
+ tf.__operators__.add_5 (TF  (None, 577, 3)               0         ['dense_5[0][0]',             
+ OpLambda)                                                           'tf.__operators__.add_4[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_6 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_5[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ multi_head_attention_3 (Mu  (None, 577, 3)               7683      ['layer_normalization_6[0][0]'
+ ltiHeadAttention)                                                  , 'layer_normalization_6[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_6[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_6 (Dropout)         (None, 577, 3)               0         ['multi_head_attention_3[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_6 (TF  (None, 577, 3)               0         ['dropout_6[0][0]',           
+ OpLambda)                                                           'tf.__operators__.add_5[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_7 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_6[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ dense_6 (Dense)             (None, 577, 16)              64        ['layer_normalization_7[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_7 (Dropout)         (None, 577, 16)              0         ['dense_6[0][0]']             
+                                                                                                  
+ dense_7 (Dense)             (None, 577, 3)               51        ['dropout_7[0][0]']           
+                                                                                                  
+ tf.__operators__.add_7 (TF  (None, 577, 3)               0         ['dense_7[0][0]',             
+ OpLambda)                                                           'tf.__operators__.add_6[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_8 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_7[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ multi_head_attention_4 (Mu  (None, 577, 3)               7683      ['layer_normalization_8[0][0]'
+ ltiHeadAttention)                                                  , 'layer_normalization_8[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_8[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_8 (Dropout)         (None, 577, 3)               0         ['multi_head_attention_4[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_8 (TF  (None, 577, 3)               0         ['dropout_8[0][0]',           
+ OpLambda)                                                           'tf.__operators__.add_7[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_9 (Lay  (None, 577, 3)               6         ['tf.__operators__.add_8[0][0]
+ erNormalization)                                                   ']                            
+                                                                                                  
+ dense_8 (Dense)             (None, 577, 16)              64        ['layer_normalization_9[0][0]'
+                                                                    ]                             
+                                                                                                  
+ dropout_9 (Dropout)         (None, 577, 16)              0         ['dense_8[0][0]']             
+                                                                                                  
+ dense_9 (Dense)             (None, 577, 3)               51        ['dropout_9[0][0]']           
+                                                                                                  
+ tf.__operators__.add_9 (TF  (None, 577, 3)               0         ['dense_9[0][0]',             
+ OpLambda)                                                           'tf.__operators__.add_8[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_10 (La  (None, 577, 3)               6         ['tf.__operators__.add_9[0][0]
+ yerNormalization)                                                  ']                            
+                                                                                                  
+ multi_head_attention_5 (Mu  (None, 577, 3)               7683      ['layer_normalization_10[0][0]
+ ltiHeadAttention)                                                  ',                            
+                                                                     'layer_normalization_10[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_10[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_10 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_5[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_10 (T  (None, 577, 3)               0         ['dropout_10[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_9[0][0]
+                                                                    ']                            
+                                                                                                  
+ layer_normalization_11 (La  (None, 577, 3)               6         ['tf.__operators__.add_10[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_10 (Dense)            (None, 577, 16)              64        ['layer_normalization_11[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_11 (Dropout)        (None, 577, 16)              0         ['dense_10[0][0]']            
+                                                                                                  
+ dense_11 (Dense)            (None, 577, 3)               51        ['dropout_11[0][0]']          
+                                                                                                  
+ tf.__operators__.add_11 (T  (None, 577, 3)               0         ['dense_11[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_10[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_12 (La  (None, 577, 3)               6         ['tf.__operators__.add_11[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_6 (Mu  (None, 577, 3)               7683      ['layer_normalization_12[0][0]
+ ltiHeadAttention)                                                  ',                            
+                                                                     'layer_normalization_12[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_12[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_12 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_6[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_12 (T  (None, 577, 3)               0         ['dropout_12[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_11[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_13 (La  (None, 577, 3)               6         ['tf.__operators__.add_12[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_12 (Dense)            (None, 577, 16)              64        ['layer_normalization_13[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_13 (Dropout)        (None, 577, 16)              0         ['dense_12[0][0]']            
+                                                                                                  
+ dense_13 (Dense)            (None, 577, 3)               51        ['dropout_13[0][0]']          
+                                                                                                  
+ tf.__operators__.add_13 (T  (None, 577, 3)               0         ['dense_13[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_12[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_14 (La  (None, 577, 3)               6         ['tf.__operators__.add_13[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_7 (Mu  (None, 577, 3)               7683      ['layer_normalization_14[0][0]
+ ltiHeadAttention)                                                  ',                            
+                                                                     'layer_normalization_14[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_14[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_14 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_7[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_14 (T  (None, 577, 3)               0         ['dropout_14[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_13[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_15 (La  (None, 577, 3)               6         ['tf.__operators__.add_14[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_14 (Dense)            (None, 577, 16)              64        ['layer_normalization_15[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_15 (Dropout)        (None, 577, 16)              0         ['dense_14[0][0]']            
+                                                                                                  
+ dense_15 (Dense)            (None, 577, 3)               51        ['dropout_15[0][0]']          
+                                                                                                  
+ tf.__operators__.add_15 (T  (None, 577, 3)               0         ['dense_15[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_14[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_16 (La  (None, 577, 3)               6         ['tf.__operators__.add_15[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_8 (Mu  (None, 577, 3)               7683      ['layer_normalization_16[0][0]
+ ltiHeadAttention)                                                  ',                            
+                                                                     'layer_normalization_16[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_16[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_16 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_8[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_16 (T  (None, 577, 3)               0         ['dropout_16[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_15[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_17 (La  (None, 577, 3)               6         ['tf.__operators__.add_16[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_16 (Dense)            (None, 577, 16)              64        ['layer_normalization_17[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_17 (Dropout)        (None, 577, 16)              0         ['dense_16[0][0]']            
+                                                                                                  
+ dense_17 (Dense)            (None, 577, 3)               51        ['dropout_17[0][0]']          
+                                                                                                  
+ tf.__operators__.add_17 (T  (None, 577, 3)               0         ['dense_17[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_16[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_18 (La  (None, 577, 3)               6         ['tf.__operators__.add_17[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_9 (Mu  (None, 577, 3)               7683      ['layer_normalization_18[0][0]
+ ltiHeadAttention)                                                  ',                            
+                                                                     'layer_normalization_18[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_18[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_18 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_9[0][0]
+                                                                    ']                            
+                                                                                                  
+ tf.__operators__.add_18 (T  (None, 577, 3)               0         ['dropout_18[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_17[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_19 (La  (None, 577, 3)               6         ['tf.__operators__.add_18[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_18 (Dense)            (None, 577, 16)              64        ['layer_normalization_19[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_19 (Dropout)        (None, 577, 16)              0         ['dense_18[0][0]']            
+                                                                                                  
+ dense_19 (Dense)            (None, 577, 3)               51        ['dropout_19[0][0]']          
+                                                                                                  
+ tf.__operators__.add_19 (T  (None, 577, 3)               0         ['dense_19[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_18[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_20 (La  (None, 577, 3)               6         ['tf.__operators__.add_19[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_10 (M  (None, 577, 3)               7683      ['layer_normalization_20[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_20[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_20[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_20 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_10[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_20 (T  (None, 577, 3)               0         ['dropout_20[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_19[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_21 (La  (None, 577, 3)               6         ['tf.__operators__.add_20[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_20 (Dense)            (None, 577, 16)              64        ['layer_normalization_21[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_21 (Dropout)        (None, 577, 16)              0         ['dense_20[0][0]']            
+                                                                                                  
+ dense_21 (Dense)            (None, 577, 3)               51        ['dropout_21[0][0]']          
+                                                                                                  
+ tf.__operators__.add_21 (T  (None, 577, 3)               0         ['dense_21[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_20[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_22 (La  (None, 577, 3)               6         ['tf.__operators__.add_21[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_11 (M  (None, 577, 3)               7683      ['layer_normalization_22[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_22[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_22[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_22 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_11[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_22 (T  (None, 577, 3)               0         ['dropout_22[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_21[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_23 (La  (None, 577, 3)               6         ['tf.__operators__.add_22[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_22 (Dense)            (None, 577, 16)              64        ['layer_normalization_23[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_23 (Dropout)        (None, 577, 16)              0         ['dense_22[0][0]']            
+                                                                                                  
+ dense_23 (Dense)            (None, 577, 3)               51        ['dropout_23[0][0]']          
+                                                                                                  
+ tf.__operators__.add_23 (T  (None, 577, 3)               0         ['dense_23[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_22[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_24 (La  (None, 577, 3)               6         ['tf.__operators__.add_23[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_12 (M  (None, 577, 3)               7683      ['layer_normalization_24[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_24[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_24[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_24 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_12[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_24 (T  (None, 577, 3)               0         ['dropout_24[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_23[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_25 (La  (None, 577, 3)               6         ['tf.__operators__.add_24[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_24 (Dense)            (None, 577, 16)              64        ['layer_normalization_25[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_25 (Dropout)        (None, 577, 16)              0         ['dense_24[0][0]']            
+                                                                                                  
+ dense_25 (Dense)            (None, 577, 3)               51        ['dropout_25[0][0]']          
+                                                                                                  
+ tf.__operators__.add_25 (T  (None, 577, 3)               0         ['dense_25[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_24[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_26 (La  (None, 577, 3)               6         ['tf.__operators__.add_25[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_13 (M  (None, 577, 3)               7683      ['layer_normalization_26[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_26[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_26[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_26 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_13[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_26 (T  (None, 577, 3)               0         ['dropout_26[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_25[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_27 (La  (None, 577, 3)               6         ['tf.__operators__.add_26[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_26 (Dense)            (None, 577, 16)              64        ['layer_normalization_27[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_27 (Dropout)        (None, 577, 16)              0         ['dense_26[0][0]']            
+                                                                                                  
+ dense_27 (Dense)            (None, 577, 3)               51        ['dropout_27[0][0]']          
+                                                                                                  
+ tf.__operators__.add_27 (T  (None, 577, 3)               0         ['dense_27[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_26[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_28 (La  (None, 577, 3)               6         ['tf.__operators__.add_27[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_14 (M  (None, 577, 3)               7683      ['layer_normalization_28[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_28[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_28[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_28 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_14[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_28 (T  (None, 577, 3)               0         ['dropout_28[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_27[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_29 (La  (None, 577, 3)               6         ['tf.__operators__.add_28[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_28 (Dense)            (None, 577, 16)              64        ['layer_normalization_29[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_29 (Dropout)        (None, 577, 16)              0         ['dense_28[0][0]']            
+                                                                                                  
+ dense_29 (Dense)            (None, 577, 3)               51        ['dropout_29[0][0]']          
+                                                                                                  
+ tf.__operators__.add_29 (T  (None, 577, 3)               0         ['dense_29[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_28[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_30 (La  (None, 577, 3)               6         ['tf.__operators__.add_29[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ multi_head_attention_15 (M  (None, 577, 3)               7683      ['layer_normalization_30[0][0]
+ ultiHeadAttention)                                                 ',                            
+                                                                     'layer_normalization_30[0][0]
+                                                                    ',                            
+                                                                     'layer_normalization_30[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_30 (Dropout)        (None, 577, 3)               0         ['multi_head_attention_15[0][0
+                                                                    ]']                           
+                                                                                                  
+ tf.__operators__.add_30 (T  (None, 577, 3)               0         ['dropout_30[0][0]',          
+ FOpLambda)                                                          'tf.__operators__.add_29[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_31 (La  (None, 577, 3)               6         ['tf.__operators__.add_30[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ dense_30 (Dense)            (None, 577, 16)              64        ['layer_normalization_31[0][0]
+                                                                    ']                            
+                                                                                                  
+ dropout_31 (Dropout)        (None, 577, 16)              0         ['dense_30[0][0]']            
+                                                                                                  
+ dense_31 (Dense)            (None, 577, 3)               51        ['dropout_31[0][0]']          
+                                                                                                  
+ tf.__operators__.add_31 (T  (None, 577, 3)               0         ['dense_31[0][0]',            
+ FOpLambda)                                                          'tf.__operators__.add_30[0][0
+                                                                    ]']                           
+                                                                                                  
+ layer_normalization_32 (La  (None, 577, 3)               6         ['tf.__operators__.add_31[0][0
+ yerNormalization)                                                  ]']                           
+                                                                                                  
+ flatten (Flatten)           (None, 1731)                 0         ['layer_normalization_32[0][0]
+                                                                    ']                            
+                                                                                                  
+ dense_32 (Dense)            (None, 1)                    1732      ['flatten[0][0]']             
+                                                                                                  
+==================================================================================================
+Total params: 126698 (494.91 KB)
+Trainable params: 126698 (494.91 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________

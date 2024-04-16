@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import os
+import io
 from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, Masking, Flatten
 from keras.models import Model
@@ -148,8 +149,8 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_en
 
     x = LayerNormalization(epsilon=1e-6)(decoder_output)
     x = Flatten()(x)
-    x = Dense(1024, activation=activation)(x)
-    x = Dense(512, activation=activation)(x)
+    # x = Dense(1024, activation=activation)(x)
+    # x = Dense(512, activation=activation)(x)
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
     return Model(inputs = sequence_input, outputs = x)
@@ -200,6 +201,16 @@ def train_and_evaluate_model(hp):
 
     model = build_model(sequence_len, sequential_feature_size, hp['head_size'], hp['num_heads'], hp['ff_dim'], hp['num_encoder_layers'], hp['num_decoder_layers'], hp['dropout'], hp['activation'])
     model.compile(optimizer=optimizer, loss='mean_squared_error')
+    
+    
+    # Capture the summary to a string
+    summary_string = io.StringIO()
+    model.summary(print_fn=lambda x: summary_string.write(x + '\n'))
+    summary_content = summary_string.getvalue()
+    summary_string.close()
+
+    with open(f'home/zwang/cosmic-ray-nn/model_structure_no_dense.txt', 'w') as file:
+        file.write(summary_content)
     
     history = None
 
