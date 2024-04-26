@@ -11,10 +11,11 @@ X_all = []
 dEdX_all = []
 
 noise = False # Whether to add noise to dEdX values
+zenith_threshold = 60
 
 num_files = 0
 # Open files in each folder
-for i in range(0, 5):
+for i in range(0, 21):
     foldername = f'/Data/Simulations/Conex_Flat_lnA/EPOS/Conex_170-205_Prod{i}/showers/*.root'
     print(foldername)
     for filename in glob.glob(foldername):
@@ -58,33 +59,36 @@ for i in range(0, 5):
         # nXcx=tshowercx["nX"].array()
         
 
-        zenithcx=tshowercx["zenith"].array()
-        zenith_all = np.append(zenith_all, zenithcx)
-        Xcx=tshowercx["X"].array()
-        dEdX=tshowercx["dEdX"].array()
+        zenithcx = tshowercx["zenith"].array()
+        Xcx = tshowercx["X"].array()
+        dEdX = tshowercx["dEdX"].array()
 
         mass = math.log(theadercx['Particle'].array()[0]/100)
-        masses = mass * np.ones(len(zenithcx))
-        mass_all = np.append(mass_all, masses)
+       
+        for index, zenith in enumerate(zenithcx): 
+            if zenith < zenith_threshold:
+                zenith_all = np.append(zenith_all, zenith)
+                masses = mass * np.ones(1)
+                mass_all = np.append(mass_all, masses)
 
-        for x_arr in Xcx:
-            x_arr = [0 if np.isnan(x) else x for x in x_arr]
-            X_all.append(x_arr)
+                x_arr = Xcx[index]
+                x_arr = [0 if np.isnan(x) else x for x in x_arr]
+                X_all.append(x_arr)
 
-        for dE_arr in dEdX:
-            if noise:
-                # Add Gaussian noise to each dEdX value
-                vals_with_noise = []
-                for dE_index in range(len(dE_arr)):
-                    noise_mean = 500  # Mean of the Gaussian noise
-                    noise_std = 250  # Standard deviation of the Gaussian noise
-                    noise = np.random.normal(noise_mean, noise_std)
-                    vals_with_noise.append(dE_arr[dE_index] + noise)
-                dE_arr = vals_with_noise
-            
-            # Rescale logarithmically
-            dE_arr = [0 if x<=1 else math.log(x) for x in dE_arr]
-            dEdX_all.append(dE_arr)
+                dE_arr = dEdX[index]
+                if noise:
+                    # Add Gaussian noise to each dEdX value
+                    vals_with_noise = []
+                    for dE_index in range(len(dE_arr)):
+                        noise_mean = 500  # Mean of the Gaussian noise
+                        noise_std = 250  # Standard deviation of the Gaussian noise
+                        noise = np.random.normal(noise_mean, noise_std)
+                        vals_with_noise.append(dE_arr[dE_index] + noise)
+                    dE_arr = vals_with_noise
+                    
+                # Rescale logarithmically
+                dE_arr = [0 if x<=1 else math.log(x) for x in dE_arr]
+                dEdX_all.append(dE_arr)
 
 print("Number of files:", num_files)
 
@@ -139,4 +143,4 @@ print(f'dEdX shape: {np.shape(dEdX_all)}')
 if noise:
     np.savez('/DataFast/zwang/data_with_noise.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)    
 else:
-    np.savez('/DataFast/zwang/data_prod_0_to_4.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)
+    np.savez(f'/DataFast/zwang/data_prod_0_to_20_zen_below_{zenith_threshold}.npz', mass=mass_all, zenith=zenith_all, x=X_all, dEdX=dEdX_all)

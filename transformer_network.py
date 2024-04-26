@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from keras.layers import Layer, Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, Masking, Flatten
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LambdaCallback, ModelCheckpoint, Callback
+from keras.callbacks import EarlyStopping, LambdaCallback, ModelCheckpoint, Callback, LearningRateScheduler
 from keras.optimizers.schedules import ExponentialDecay
 from itertools import product
 
@@ -14,7 +14,7 @@ from itertools import product
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # Get the processed data
-preprocessed_data = 'DataFast/zwang/data_prod_0_to_20.npz'
+preprocessed_data = 'DataFast/zwang/data_prod_0_to_20_zen_below_60.npz'
 
 # Load data into a multi-array object
 f = np.load(preprocessed_data, allow_pickle=True)
@@ -34,7 +34,7 @@ zen = np.repeat(zen[:, np.newaxis], X.shape[1], axis=1)
 sequential_features = np.stack([X, dEdX, zen], axis=-1)
 
 # Split the data into training and test sets
-indicesFile = 'DataFast/zwang/train_indices_prod_0_to_20.npz'
+indicesFile = 'DataFast/zwang/train_indices_prod_0_to_20_zen_below_60.npz'
 indices = np.load(indicesFile)
 indices_train = indices['indices_train']
 indices_test = indices['indices_test']
@@ -149,8 +149,8 @@ def build_model(sequence_len, feature_size, head_size, num_heads, ff_dim, num_en
 
     x = LayerNormalization(epsilon=1e-6)(decoder_output)
     x = Flatten()(x)
-    # x = Dense(1024, activation=activation)(x)
-    # x = Dense(512, activation=activation)(x)
+    x = Dense(512, activation=activation)(x)
+    x = Dense(256, activation=activation)(x)
     x = Dense(1)(x)  # Assuming a single output value for each time step
 
     return Model(inputs = sequence_input, outputs = x)
@@ -179,7 +179,7 @@ lr_schedule = ExponentialDecay(
     initial_learning_rate,
     decay_steps=decay_steps,
     decay_rate=decay_rate,
-    staircase=True  # Set to False for smooth decay, True for discrete steps
+    staircase=False  # Set to False for smooth decay, True for discrete steps
 )
 
 # Function to train a model and return the validation loss
@@ -194,6 +194,7 @@ def train_and_evaluate_model(hp):
 
     early_stopping = EarlyStopping(monitor='val_loss', mode='min', restore_best_weights=True)
     dynamic_patience = DynamicPatienceCallback(early_stopping)
+    lr_scheduler = LearningRateScheduler(lr_schedule)
     lr_logger = LambdaCallback(on_epoch_begin=lambda epoch, logs: print_lr(epoch, logs))
     save_best_model = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/best_model.h5', monitor='val_loss', save_best_only=True, mode='min')
     save_current_model = ModelCheckpoint('home/zwang/cosmic-ray-nn/training/training_details/current_model.h5')
@@ -209,13 +210,13 @@ def train_and_evaluate_model(hp):
     summary_content = summary_string.getvalue()
     summary_string.close()
 
-    with open(f'home/zwang/cosmic-ray-nn/model_structure_no_dense.txt', 'w') as file:
+    with open(f'home/zwang/cosmic-ray-nn/model_structure.txt', 'w') as file:
         file.write(summary_content)
     
     history = None
 
     try:
-        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=1500, validation_split=0.25, callbacks=[early_stopping, lr_logger, dynamic_patience, save_best_model, save_current_model, interrupt_handler])
+        fit = model.fit(x_train_sequential, y_train, batch_size=hp['batch_size'], epochs=1500, validation_split=0.25, callbacks=[lr_scheduler, lr_logger, save_best_model, save_current_model, interrupt_handler])
         history = fit.history
         validation_loss = np.min(history['val_loss'])  # Get the best validation loss during the training
     except KeyboardInterrupt:
