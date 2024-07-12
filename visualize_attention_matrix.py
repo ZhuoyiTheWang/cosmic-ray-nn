@@ -104,8 +104,13 @@ proton_dEdX_values = proton_entries[:10, ..., 1]  # First 10 entries, dEdX coord
 
 # Loop through the first 10 entries and save each plot as a PNG
 for i in range(10):
+    sequence_length = len(proton_dEdX_values[i])
+
+    # Generate sequence indices
+    sequence_indices = np.arange(sequence_length)
+
     plt.figure(figsize=(8, 6))
-    plt.scatter(proton_X_values[i], proton_dEdX_values[i], alpha=0.5)
+    plt.scatter(sequence_indices, proton_dEdX_values[i], alpha=0.5)
     plt.title(f'Entry {i+1}: Scatter Plot of X vs dEdX')
     plt.xlabel('X')
     plt.ylabel('dEdX')
@@ -117,8 +122,13 @@ iron_dEdX_values = iron_entries[:10, ..., 1]  # First 10 entries, dEdX coordinat
 
 # Loop through the first 10 entries and save each plot as a PNG
 for i in range(10):
+    sequence_length = len(iron_dEdX_values[i])
+
+    # Generate sequence indices
+    sequence_indices = np.arange(sequence_length)
+
     plt.figure(figsize=(8, 6))
-    plt.scatter(iron_X_values[i], iron_dEdX_values[i], alpha=0.5)
+    plt.scatter(sequence_indices, iron_dEdX_values[i], alpha=0.5)
     plt.title(f'Entry {i+1}: Scatter Plot of X vs dEdX')
     plt.xlabel('X')
     plt.ylabel('dEdX')
@@ -131,13 +141,98 @@ combined_entries = np.concatenate([proton_first_10, iron_first_10], axis=0)
 
 outputs, attention_weights = model.predict(combined_entries)
 
-first_sample_first_head_attention = attention_weights[0][0, 0]  # First layer, first sample, first head
+attention_array = np.array(attention_weights)  # shape [num_layers, num_samples, num_heads, seq_len, seq_len]
 
-# Visualize the attention matrix using matplotlib
-plt.imshow(first_sample_first_head_attention, cmap='viridis', aspect='auto')
-plt.colorbar()
-plt.xlabel("Position in Sequence")
-plt.ylabel("Position in Sequence")
-plt.title("Attention Weights of First Head for First Sample")
-plt.savefig("home/zwang/cosmic-ray-nn/first_sample_first_head.png")
-plt.show()
+num_samples = attention_array.shape[1]
+seq_len = attention_array.shape[-1]
+
+# Loop through each sample to compute aggregated sum and mean attention
+for sample_idx in range(num_samples):
+    # Sum and mean across layers and heads for this sample
+    sum_attention = np.sum(attention_array[:, sample_idx, :, :, :], axis=(0, 1))
+    mean_attention = np.mean(attention_array[:, sample_idx, :, :, :], axis=(0, 1))
+
+    sum_attention_flipped = np.flipud(sum_attention)
+    mean_attention_flipped = np.flipud(mean_attention)
+
+    # Function to add row and column indices to the matrix
+    def add_indices(matrix):
+        rows, cols = matrix.shape
+        row_indices = np.arange(rows)[:, None]  # Create column vector for row indices
+        col_indices = np.arange(cols + 1)  # Column indices with one extra for the row header
+
+        # Prepend row indices to the matrix
+        matrix_with_row_indices = np.hstack((row_indices, matrix))
+
+        # Append column indices as a header row
+        matrix_with_indices = np.vstack((col_indices, matrix_with_row_indices))
+
+        return matrix_with_indices
+
+    # Apply function
+    sum_attention_indexed = add_indices(sum_attention_flipped)
+    mean_attention_indexed = add_indices(mean_attention_flipped)
+
+    # Saving the matrices with indices
+    def save_matrix_with_indices(path, matrix):
+        header = ','.join([''] + [str(i) for i in range(matrix.shape[1] - 1)])  # Adjust header for zero-based column index
+        np.savetxt(path, matrix, fmt='%g', delimiter=',', header=header, comments='')
+
+    # File paths
+    sum_attention_path = f'home/zwang/cosmic-ray-nn/aggregated_attention/sum_attention_sample_{sample_idx + 1}.txt'
+    mean_attention_path = f'home/zwang/cosmic-ray-nn/aggregated_attention/mean_attention_sample_{sample_idx + 1}.txt'
+
+    # Save indexed matrices
+    save_matrix_with_indices(sum_attention_path, sum_attention_indexed)
+    save_matrix_with_indices(mean_attention_path, mean_attention_indexed)
+
+    # Plotting the sum attention heatmap
+    plt.figure(figsize=(10, 8))
+    plt.imshow(sum_attention, cmap='viridis', aspect='auto')
+    plt.colorbar()
+    plt.xlabel("Position in Sequence")
+    plt.ylabel("Position in Sequence")
+    plt.gca().invert_yaxis() 
+    plt.title(f"Summed Attention Map for Sample {sample_idx+1}")
+    plt.savefig(f"home/zwang/cosmic-ray-nn/aggregated_attention/sum_attention_sample_{sample_idx+1}.png")
+    plt.close()  # Close to free memory
+
+    # Plotting the mean attention heatmap
+    plt.figure(figsize=(10, 8))
+    plt.imshow(mean_attention, cmap='viridis', aspect='auto')
+    plt.colorbar()
+    plt.xlabel("Position in Sequence")
+    plt.ylabel("Position in Sequence")
+    plt.gca().invert_yaxis() 
+    plt.title(f"Mean Attention Map for Sample {sample_idx+1}")
+    plt.savefig(f"home/zwang/cosmic-ray-nn/aggregated_attention/mean_attention_sample_{sample_idx+1}.png")
+    plt.close()  # Close to free memory
+
+
+# num_samples = combined_entries.shape[0]
+# num_heads = hp['num_heads']
+# num_layers = hp['num_encoder_layers']
+
+# for sample_idx in range(num_samples):
+#     for layer_idx in range(num_layers):
+#         for head_idx in range(num_heads):
+#             attention_data = attention_weights[layer_idx][sample_idx, head_idx]  # Get the specific attention data
+
+#             # Create a grid for sequence positions
+#             seq_len = attention_data.shape[0]
+#             x, y = np.meshgrid(np.arange(seq_len), np.arange(seq_len))
+
+#             # Flatten the grid and attention data for scatter plotting
+#             x = x.flatten()
+#             y = y.flatten()
+#             sizes = attention_data.flatten() * 1000  # Scale up sizes for better visibility
+
+#             plt.figure(figsize=(10, 8))
+#             scatter = plt.scatter(x, y, s=sizes, c=sizes, cmap='viridis', alpha=0.6)
+#             plt.colorbar(scatter)
+#             plt.xlabel("Position in Sequence")
+#             plt.ylabel("Position in Sequence")
+#             plt.title(f"Scatter Plot of Attention - Sample {sample_idx+1}, Layer {layer_idx+1}, Head {head_idx+1}")
+#             plt.grid(True)  # Optionally add a grid
+#             plt.savefig(f"home/zwang/cosmic-ray-nn/attention_scatters/sample_{sample_idx+1}_layer_{layer_idx+1}_head_{head_idx+1}.png")
+#             plt.close()  # Close the figure to free up memory
